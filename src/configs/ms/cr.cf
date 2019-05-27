@@ -1,0 +1,38 @@
+optim = 'RMSprop'
+
+lr.initial = 0.0001
+lr.schedule = 'exp_0.75_e5'
+weight_decay = 0
+
+num_scales = 3
+shared_across_scales = False
+
+Cf = 64
+kernel_size = 3
+
+dmll_enable_grad = 0
+
+rgb_bicubic_baseline = False
+
+enc.cls = 'EDSRLikeEnc'
+enc.num_blocks = 8
+enc.feed_F = True
+enc.importance_map = False
+
+learned_L = False
+
+dec.cls = 'EDSRDec'
+dec.num_blocks = 8
+dec.skip = True
+
+q.cls = 'Quantizer'
+q.C = 5
+# We assume q.L levels, evenly distributed between q.levels_range[0] and q.levels_range[1], see net.py
+q.L = 25
+q.levels_range = (-1, 1)
+q.sigma = 2
+
+prob.K = 10
+
+after_q1x1 = True
+x4_down_in_scale0 = False

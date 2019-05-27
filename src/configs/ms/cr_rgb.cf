@@ -1,0 +1,6 @@
+use cr_rgb_shared.cf
+
+num_scales = 3
+# We have a skip in the decoder, see comment in _forward_with_scales in multiscale.py
+dec.skip = True
+

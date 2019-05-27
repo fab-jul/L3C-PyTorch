@@ -1,0 +1,14 @@
+# Note: this is different from the text, batch size is actually 30. See Errata in README
+batchsize_train = 30
+batchsize_val = 120
+crop_size = 32
+
+max_epochs = None
+
+image_cache_pkl = None
+train_imgs_glob = 'path/to/train_32x32/ (check readme)'
+val_glob = 'path/to/val_32x32 (check readme)'
+
+val_glob_min_size = None
+fixed_first_image = None
+num_val_batches = 5

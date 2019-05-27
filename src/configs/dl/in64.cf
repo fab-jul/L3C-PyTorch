@@ -1,0 +1,9 @@
+use in32.cf
+
+crop_size = 64
+
+image_cache_pkl = None
+train_imgs_glob = 'path/to/train_64x64/ (check readme)'
+val_glob = 'path/to/val_64x64 (check readme)'
+
+num_val_batches = 5

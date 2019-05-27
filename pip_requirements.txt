@@ -1,0 +1,6 @@
+Pillow
+scipy==1.1.0
+fasteners==0.14.1
+fjcommon==0.2.10
+tensorboardX==1.2
+matplotlib==2.2.2

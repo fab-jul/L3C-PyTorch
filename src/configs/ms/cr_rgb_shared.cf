@@ -1,0 +1,15 @@
+use cr.cf
+
+rgb_bicubic_baseline = True
+q.C = 3
+q.L = 5
+
+# shared for all
+num_scales = 1
+
+enc.feed_F = False
+
+dec.skip = False
+
+enc.cls = 'BicubicSubsampling'
+
