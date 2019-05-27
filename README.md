@@ -54,11 +54,11 @@ We release the following trained models:
 
 |     | Name | Training Set | ID  | Download |
 | --- | ---- | ------------ | --- | --------- |
-| Main Model | L3C | Open Images | `0524_0001` | [L3C.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models/L3C.tar.gz) |
+| Main Model | L3C | [Open Images](#prepare-open-images-for-training) | `0524_0001` | [L3C.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models/L3C.tar.gz) |
 | Baseline | RGB Shared | Open Images | `0524_0002` | [RGB_Shared.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models/RGB_Shared.tar.gz) |
 | Baseline | RGB | Open Images | `0524_0003` | [RGB.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models/RGB.tar.gz) |
-| Main Model | L3C | [ImageNet32](http://image-net.org/download-images) ([8] in paper)   | `0524_0004` | [L3C_inet32.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models/L3C_inet32.tar.gz) |
-| Main Model | L3C | [ImageNet64](http://image-net.org/download-images) ([8] in paper)   | `0524_0005` | [L3C_inet64.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models/L3C_inet64.tar.gz) |
+| Main Model | L3C | [ImageNet32](http://image-net.org/download-images)    | `0524_0004` | [L3C_inet32.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models/L3C_inet32.tar.gz) |
+| Main Model | L3C | [ImageNet64](http://image-net.org/download-images)    | `0524_0005` | [L3C_inet64.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models/L3C_inet64.tar.gz) |
 
 See [Evaluation of Models](#evaluation-of-models) to learn how to evaluate on a dataset.
 
@@ -286,7 +286,7 @@ See Section 5.4. ("Sampling Representations") in the paper.
 ## Prepare Open Images for training
 
 1. Download [Open Images training sets and validation set](https://github.com/cvdfoundation/open-images-dataset#download-images-with-bounding-boxes-annotations),
-we used 0, 1, 2, plus the validation set:
+we used the parts 0, 1, 2, plus the validation set:
 ```
 aws s3 --no-sign-request cp s3://open-images-dataset/tar/train_0.tar.gz train_0.tar.gz
 aws s3 --no-sign-request cp s3://open-images-dataset/tar/train_1.tar.gz train_1.tar.gz
@@ -331,7 +331,10 @@ dimensions smaller than 128 are in your training foler. If they are there, train
 ## Citation
 
 If you use the work released here for your research, please cite this paper:
-
-_Upcoming_
-
-
+```
+@inproceedings{mentzer2019practical,
+    Author = {Mentzer, Fabian and Agustsson, Eirikur and Tschannen, Michael and Timofte, Radu and Van Gool, Luc},
+    Booktitle = {Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+    Title = {Practical Full Resolution Learned Lossless Image Compression},
+    Year = {2019}}
+```
