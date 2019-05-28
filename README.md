@@ -86,7 +86,7 @@ When preparing this repo, we found that removing one approximation in the loss o
 <!-- TODO: add CR link -->
 
 The code contains the loss without the approximation.
-We note that [arXiv v2](https://arxiv.org/abs/1811.12817) is the same as CVPR Camera Ready version, and the results in there where obtained
+We note that [arXiv v2](https://arxiv.org/abs/1811.12817v2) is the same as CVPR Camera Ready version, and the results in there where obtained
 with the approximation.
 
 However, if you re-train with the provided code, you'll get the new results.
