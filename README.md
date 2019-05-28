@@ -47,7 +47,7 @@ To test our entropy coding, **you must also install torchac**, as [described bel
 needs PyTorch 1.0 or newer to build, [see below](#the-torchac-module-fast-entropy-coding-in-pytorch).
 - The code relies on `tensorboardX==1.2`, even though TensorBoard is now part of PyTorch (since 1.1)
 
-## Released models
+## Released Models
 
 We release the following trained models:
 
@@ -62,8 +62,11 @@ We release the following trained models:
 
 See [Evaluation of Models](#evaluation-of-models) to learn how to evaluate on a dataset.
 
-You can train them yourself using the following commands, after preparing the data as shown in
-[Prepare Open Images Train](#prepare-open-images-for-training):
+### Training
+
+To train a model yourself, 
+you have to first prepare the data as shown in [Prepare Open Images Train](#prepare-open-images-for-training).
+Then, use one of the following commands, [explained in more detail below](#experiments):
 
 | Model | Train with the following flags to `train.py`|
 | --- | --- |
@@ -77,6 +80,24 @@ Each of the released models were trained for around 5 days on a Titan Xp.
 
 *Note*: We do not provide code for multi-GPU training. To incorporate `nn.DataParallel`, the code must be changed
 slightly: In `net.py`, `EncOut` and `DecOut` are `namedtuple`s, which is not supported by `nn.DataParallel`.
+
+### Evaluation
+
+To test an [experiment](#experiments), use `test.py`. For example, to test L3C and the baselines, run
+
+```
+python test.py /path/to/logdir 0524_0001,0524_0002,0524_0003 /some/imgdir,/some/other/imgdir \
+    --names "L3C,RGB Shared,RGB" --recursive=auto
+```
+
+To use the entropy coder and get timings for encoding/decoding, use `--write_to_files` (this needs `torchac`, 
+[see below](#the-torchac-module-fast-entropy-coding-in-pytorch)):
+
+```
+python test.py /path/to/logdir 0524_0001 /some/imgdir --write_to_files=files_out_dir
+```
+
+More flags available with `python test.py -h`.
 
 ### Results
 
@@ -112,9 +133,10 @@ Every experiment is based on a specific configuration file for the network, stor
 another file for the dataloading, stored in _configs/dl_.
 An experiment is uniquely identified by the **log date**, which is just date and time (e.g. `0506_1107`).
 The config files are parsed with the [parser from `fjcommon`](https://github.com/fab-jul/fjcommon#configparserpy),
-which allow hiararchies of configs.
+which allows hiararchies of configs.
 Additionally, there is `global_config.py`, to allow quick changes by passing
  additional parameters via the `-p` flag, which are then available _everywhere_ in the code, see below.
+ The config files plus the `global_config` flags specify _all_ parameters needed to train a network. 
 
 When an experiment is started, a directory with all this information is created in the folder passed as
 `LOG_DIR_ROOT` to `train.py` (see `python train.py -h`).
@@ -142,13 +164,13 @@ python test.py logs 0502_1213 data/openimages_test,data/raise1k
 
 where we test on images in `data/openimages_test` and `data/raise1k`.
 
-To use another model as a pretrained model, use `--restore` and `--restore_restart`:
+To use another model as a **pretrained model**, use `--restore` and `--restore_restart`:
 
 ```bash
 python train.py configs/ll/cr.cf configs/dl/oi.cf logs --restore 0502_1213 --restore_restart
 ```
 
-### Naming of code vs. paper
+### Naming of Code vs. Paper
 
 <div align="center">
   <img src='figs/arch_detail.png' width="99%"/>
@@ -164,7 +186,7 @@ python train.py configs/ll/cr.cf configs/dl/oi.cf logs --restore 0502_1213 --res
 
 See also the notes in `src/multiscale_network/multiscale.py`.
 
-### Structure of the code
+### Structure of the Code
 
 The code is quite modular, as it was used to experiment with different things. At the heart is the
 `MultiscaleBlueprint` class, which has the following main functions: `forward`, `get_loss`, `sample`. It is used by the
@@ -179,7 +201,7 @@ For bitcoding, there is the `Bitcoding` class, which uses the `ArithmeticCoding`
   <img src='figs/l3c_code_outline.jpg' width='60%'/>
 </div>
 
-### The `torchac` module: Fast Entropy Coding in Pytorch
+## The `torchac` Module: Fast Entropy Coding in PyTorch
 
 We implemented an entropy coding module as a C++ extension for PyTorch, because no existing fast Python entropy
  coding module was available. You'll need to build it if you plan to use the `--write_to_file` flag for `test.py`
@@ -211,7 +233,7 @@ For CUDA, make sure `nvcc -V` gives the desired version (tested with 9.0).
 
 Then do:
 
-```
+```bash
 conda activate l3c_env
 cd src/torchac
 COMPILE_CUDA=auto python setup.py
@@ -232,33 +254,6 @@ python -c "import torchac"
 
 It should not print anything.
 
-## Evaluation of Models
-
-To test an experiment, use `test.py`. For example, to test L3C and the baselines, run
-
-```
-python test.py /path/to/logdir 0524_0001,0524_0002,0524_0003 /some/imgdir,/some/other/imgdir \
-    --names "L3C,RGB Shared,RGB" --recursive=auto
-```
-
-To use the entropy coder and get timings for encoding/decoding, use `--write_to_files` (this needs `torchac`):
-
-```
-python test.py /path/to/logdir 0524_0001 /some/imgdir --write_to_files=files_out_dir
-```
-
-More flags available with `python test.py -h`.
-
-## Using L3C to compress images
-
-To encode/decode a single image, use `l3c.py`. This requires `torchac`:
-
-```bash
-# Encode to out.l3c
-python l3c.py /path/to/logdir 0524_0001 enc /path/to/img out.l3c
-# Decode from out.l3c, save to decoded.png
-python l3c.py /path/to/logdir 0524_0001 dec out.l3c decoded.png
-```
 
 ## Sampling
 
@@ -283,22 +278,38 @@ This produces outputs in a directory `samples`. Per image, you'll get something 
 
 See Section 5.4. ("Sampling Representations") in the paper.
 
-## Prepare Open Images for training
 
-### Option 1: Easy and Slow
+## Using L3C to Compress Images
+
+To encode/decode a single image, use `l3c.py`. This requires `torchac`:
+
+```bash
+# Encode to out.l3c
+python l3c.py /path/to/logdir 0524_0001 enc /path/to/img out.l3c
+# Decode from out.l3c, save to decoded.png
+python l3c.py /path/to/logdir 0524_0001 dec out.l3c decoded.png
+```
+
+## Prepare Open Images for Training
+
+### Option 1: The Easy Way
 
 Use the `prep_openimages.sh` script. Run it in an environment with
 Python 3,
-skimage (`pip install scikit-image`, we run version 0.13.1), and 
-[awscli](https://aws.amazon.com/cli/) (`pip install awscli`):
+`skimage` (`pip install scikit-image`, tested with version 0.13.1), and 
+[`awscli`](https://aws.amazon.com/cli/) (`pip install awscli`):
 ```bash
 cd src
-./prep_openimages.sh DATA_DIR
+./prep_openimages.sh <DATA_DIR>
 ```
-This will download all images to `DATA_DIR`. Make sure there is enough space there, with the resulting tars an 
-everything probably around 300GB!
+This will download all images to `DATA_DIR`. Make sure there is enough space there, as **this script will create 
+around 300 GB of data**. Also, it will probably run for a few hours.
 
-### Option 2: Involved but can be faster
+After `./prep_openimages.sh` is done, everything is in `DATA_DIR/train_oi` and `DATA_DIR/val_oi`. Follow the 
+instructions printed by `./prep_openimages.sh` to update the config file. You may `rm -rf DATA_DIR/download` and 
+`rm -rf DATA_DIR/imported` to free up some space.
+
+### Option 2: Step by Step
 
 1. Download [Open Images training sets and validation set](https://github.com/cvdfoundation/open-images-dataset#download-images-with-bounding-boxes-annotations),
 we used the parts 0, 1, 2, plus the validation set:
@@ -311,7 +322,8 @@ we used the parts 0, 1, 2, plus the validation set:
 1. Extract to a folder, let's say `data`. Now you should have `data/train_0`, `data/train_1`, `data/train_2`, as well
  as `data/validation`.
 1. (Optional) to do the same preprocessing as in our paper, run the following. Note that it requires the `skimage`
-package. This can be parallelize over some server, by implementing a `task_array.sh`, see `import_train_images.py`.
+package. To speed this up, you can distribute it on some server, by implementing a 
+`task_array.sh`, see `import_train_images.py`.
     ```
     python import_train_images.py data train_0 train_1 train_2 validation
     ```
@@ -326,9 +338,9 @@ package. This can be parallelize over some server, by implementing a `task_array
     ```
     The `--min_size` makes sure to skip smaller images. *NOTE*: If you skip this step, make sure no files with
     dimensions smaller than 128 are in your training foler. If they are there, training might crash.
-1. Put all this into a train config. You can adapt `configs/dl/oi.cf` and update it: Set `train_imgs_glob =
-'data/train_oi'` (or whatever folder you used.) If you did the previous step, set `image_cache_pkl = 'data/cache
-.pkl`, if you did not, set `image_cache_pkl = None`. Finally, update `val_glob = 'data/validation_oi'`.
+1. Update the dataloader config, `configs/dl/oi.cf`: Set `train_imgs_glob =
+'data/train_oi'` (or whatever folder you used.) If you did the previous step, set `image_cache_pkl = 'data/cache.pkl`, 
+if you did not, set `image_cache_pkl = None`. Finally, update `val_glob = 'data/validation_oi'`.
 1. (Optional) It helps to have one fixed validation image to monitor training. You may put any image at
 `src/train/fixedimg.jpg` and it will be used for that (see `multiscale_trainer.py`).
 
