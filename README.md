@@ -244,7 +244,7 @@ python test.py /path/to/logdir 0524_0001,0524_0002,0524_0003 /some/imgdir,/some/
 To use the entropy coder and get timings for encoding/decoding, use `--write_to_files` (this needs `torchac`):
 
 ```
-python test.py /path/to/logdir 0524_0001 /some/imgdir --write_to_files
+python test.py /path/to/logdir 0524_0001 /some/imgdir --write_to_files=files_out_dir
 ```
 
 More flags available with `python test.py -h`.
