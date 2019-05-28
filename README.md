@@ -1,4 +1,4 @@
-# Practical Learned Lossless Image Compression
+# Practical Full Resolution Learned Lossless Image Compression
 
 
 ### Fabian Mentzer, Eirikur Agustsson, Michael Tschannen, Radu Timofte, Luc Van Gool
@@ -52,7 +52,7 @@ needs PyTorch 1.0 or newer to build, [see below](#the-torchac-module-fast-entrop
 We release the following trained models:
 
 
-|     | Name | Training Set | ID  | Download |
+|     | Name | Training Set | ID  | Download Model |
 | --- | ---- | ------------ | --- | --------- |
 | Main Model | L3C | [Open Images](#prepare-open-images-for-training) | `0524_0001` | [L3C.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models/L3C.tar.gz) |
 | Baseline | RGB Shared | Open Images | `0524_0002` | [RGB_Shared.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models/RGB_Shared.tar.gz) |
@@ -285,32 +285,47 @@ See Section 5.4. ("Sampling Representations") in the paper.
 
 ## Prepare Open Images for training
 
+### Option 1: Easy and Slow
+
+Use the `prep_openimages.sh` script. Run it in an environment with
+Python 3,
+skimage (`pip install scikit-image`, we run version 0.13.1), and 
+[awscli](https://aws.amazon.com/cli/) (`pip install awscli`):
+```bash
+cd src
+./prep_openimages.sh DATA_DIR
+```
+This will download all images to `DATA_DIR`. Make sure there is enough space there, with the resulting tars an 
+everything probably around 300GB!
+
+### Option 2: Involved but can be faster
+
 1. Download [Open Images training sets and validation set](https://github.com/cvdfoundation/open-images-dataset#download-images-with-bounding-boxes-annotations),
 we used the parts 0, 1, 2, plus the validation set:
-```
-aws s3 --no-sign-request cp s3://open-images-dataset/tar/train_0.tar.gz train_0.tar.gz
-aws s3 --no-sign-request cp s3://open-images-dataset/tar/train_1.tar.gz train_1.tar.gz
-aws s3 --no-sign-request cp s3://open-images-dataset/tar/train_2.tar.gz train_2.tar.gz
-aws s3 --no-sign-request cp s3://open-images-dataset/tar/validation.tar.gz validation.tar.gz
-```
+    ```
+    aws s3 --no-sign-request cp s3://open-images-dataset/tar/train_0.tar.gz train_0.tar.gz
+    aws s3 --no-sign-request cp s3://open-images-dataset/tar/train_1.tar.gz train_1.tar.gz
+    aws s3 --no-sign-request cp s3://open-images-dataset/tar/train_2.tar.gz train_2.tar.gz
+    aws s3 --no-sign-request cp s3://open-images-dataset/tar/validation.tar.gz validation.tar.gz
+    ```
 1. Extract to a folder, let's say `data`. Now you should have `data/train_0`, `data/train_1`, `data/train_2`, as well
  as `data/validation`.
 1. (Optional) to do the same preprocessing as in our paper, run the following. Note that it requires the `skimage`
-package.
-```
-python import_train_images.py data train_0 train_1 train_2 validation
-```
+package. This can be parallelize over some server, by implementing a `task_array.sh`, see `import_train_images.py`.
+    ```
+    python import_train_images.py data train_0 train_1 train_2 validation
+    ```
 1. Put all (preprocessed) images into a train and a validation folder, let's say `data/train_oi` and
 `data/validation_oi`.
 1. (Optional) If you are on a slow file system, it helps to cache the contents of `data/train_oi`. Run
-```
-cd src
-export CACHE_P="data/cache.pkl"  # <--- Change this
-export PYTHONPATH=$(pwd)
-python dataloaders/images_loader.py update data/train_oi "$CACHE_P"  --min_size 128
-```
-The `--min_size` makes sure to skip smaller images. *NOTE*: If you skip this step, make sure no files with
-dimensions smaller than 128 are in your training foler. If they are there, training might crash.
+    ```
+    cd src
+    export CACHE_P="data/cache.pkl"  # <--- Change this
+    export PYTHONPATH=$(pwd)
+    python dataloaders/images_loader.py update data/train_oi "$CACHE_P"  --min_size 128
+    ```
+    The `--min_size` makes sure to skip smaller images. *NOTE*: If you skip this step, make sure no files with
+    dimensions smaller than 128 are in your training foler. If they are there, training might crash.
 1. Put all this into a train config. You can adapt `configs/dl/oi.cf` and update it: Set `train_imgs_glob =
 'data/train_oi'` (or whatever folder you used.) If you did the previous step, set `image_cache_pkl = 'data/cache
 .pkl`, if you did not, set `image_cache_pkl = None`. Finally, update `val_glob = 'data/validation_oi'`.
