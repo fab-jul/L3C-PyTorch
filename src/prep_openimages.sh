@@ -66,11 +66,17 @@ FINAL_VAL_DIR=$DATA_DIR/val_oi
 mkdir -p $FINAL_TRAIN_DIR
 mkdir -p $FINAL_VAL_DIR
 
+
 for CLEAN_DIR in $OUT_DIR/*_clean; do
-    echo "mv $CLEAN_DIR/* $FINAL_TRAIN_DIR..."
+    if [[ $CLEAN_DIR == *"validation_"* ]]; then
+        DST=$FINAL_VAL_DIR
+    else
+        DST=$FINAL_TRAIN_DIR
+    fi
+    echo "mv $CLEAN_DIR/* $DST..."
     # Must unpack, otherwise arg list too long for mv
     for IMG in $CLEAN_DIR/*; do
-        mv $IMG $FINAL_TRAIN_DIR
+        mv $IMG $DST
     done
 done
 
