@@ -10,6 +10,15 @@ fi
 DATA_DIR=$(realpath $1)
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 
+progress () {
+    COUNTER=0
+    while read LINE; do
+        COUNTER=$((COUNTER+1))
+        echo -ne "\rExtracting $LINE; Unpacked $COUNTER files."
+    done
+    echo ""
+}
+
 echo "DATA_DIR=$DATA_DIR; SCRIPT_DIR=$SCRIPT_DIR"
 
 mkdir -pv $DATA_DIR
@@ -32,19 +41,12 @@ for DIR in $TRAIN_0 $TRAIN_1 $TRAIN_2 $VAL; do
     fi
 done
 
-progress () {
-    COUNTER=0
-    while read line; do
-        COUNTER=$((COUNTER+1))
-        echo -ne "\rExtracting $line; Unpacked $COUNTER files."
-    done
-}
-
 for DIR in $TRAIN_0 $TRAIN_1 $TRAIN_2 $VAL; do
+    TAR=${DIR}.tar.gz
     if [ -d $DIR ]; then
+        echo "Found $DIR, not unpacking $TAR..."
         continue
     fi
-    TAR=${DIR}.tar.gz
     if [ ! -f $TAR ]; then
         echo "ERROR: Expected $TAR in $DOWNLOAD_DIR"
         exit 1
@@ -55,30 +57,18 @@ done
 popd
 
 # Convert ----------
-OUT_DIR=$DATA_DIR/imported
-pushd $SCRIPT_DIR
-echo "Converting, saving in $OUT_DIR..."
-python import_train_images.py $DOWNLOAD_DIR $TRAIN_0 $TRAIN_1 $TRAIN_2 $VAL --out_dir $OUT_DIR
-
-# Move to 1 folder ----------
 FINAL_TRAIN_DIR=$DATA_DIR/train_oi
 FINAL_VAL_DIR=$DATA_DIR/val_oi
-mkdir -p $FINAL_TRAIN_DIR
-mkdir -p $FINAL_VAL_DIR
 
-
-for CLEAN_DIR in $OUT_DIR/*_clean; do
-    if [[ $CLEAN_DIR == *"validation_"* ]]; then
-        DST=$FINAL_VAL_DIR
-    else
-        DST=$FINAL_TRAIN_DIR
-    fi
-    echo "mv $CLEAN_DIR/* $DST..."
-    # Must unpack, otherwise arg list too long for mv
-    for IMG in $CLEAN_DIR/*; do
-        mv $IMG $DST
-    done
-done
+OUT_DIR=$DATA_DIR/imported
+pushd $SCRIPT_DIR
+echo "Resizing..."
+python import_train_images.py $DOWNLOAD_DIR $TRAIN_0 $TRAIN_1 $TRAIN_2 \
+        --out_dir_clean=$FINAL_TRAIN_DIR \
+        --out_dir_discard=$OUT_DIR/discard_train
+python import_train_images.py $DOWNLOAD_DIR $VAL \
+        --out_dir_clean=$FINAL_VAL_DIR \
+        --out_dir_discard=$OUT_DIR/discard_val
 
 # Update Cache ----------
 CACHE_P=$DATA_DIR/cache.pkl

@@ -45,9 +45,10 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument('base_dir')
     p.add_argument('dirs', nargs='+')
+    p.add_argument('--out_dir_clean', required=True)
+    p.add_argument('--out_dir_discard', required=True)
+
     p.add_argument('--resolution', '-r', type=str, default='768', help='can be randX_Y')
-    p.add_argument('--no_clean', '-nc', action='store_true')
-    p.add_argument('--out_dir', '-o')
     p.add_argument('--seed')
     flags = p.parse_args()
 
@@ -56,7 +57,7 @@ def main():
         random.seed(flags.seed)
 
     for d in flags.dirs:
-        process(join(flags.base_dir, d), flags.out_dir, flags.resolution, not flags.no_clean)
+        process(join(flags.base_dir, d), flags.out_dir_clean, flags.out_dir_discard, flags.resolution)
 
 
 def get_res(res) -> int:
@@ -70,44 +71,40 @@ def get_res(res) -> int:
     return random.randint(X, Y)
 
 
-def process(input_dir, out_dir, res: str, should_clean):
-    inp_base, inp_name = os.path.split(input_dir.rstrip(os.path.sep))
-    if out_dir is None:
-        out_dir = inp_base
-    output_dir = os.path.join(out_dir, inp_name + '_' + res + ('_clean' if should_clean else '_all'))
-    os.makedirs(output_dir, exist_ok=True)
-    # if should_clean, we do not discard because of HSV, but still might because of size!
-    discard_dir = os.path.join(out_dir, inp_name + '_' + res + ('_discard' if should_clean else '_discard_size'))
-    os.makedirs(discard_dir, exist_ok=True)
+def process(input_dir, out_dir_clean, out_dir_discard, res: str):
+    os.makedirs(out_dir_clean, exist_ok=True)
+    os.makedirs(out_dir_discard, exist_ok=True)
+
+    images_cleaned = set(os.listdir(out_dir_clean))
+    images_discarded = set(os.listdir(out_dir_discard))
 
     images_dl = os.listdir(input_dir)
     N = len(images_dl) // NUM_TASKS
-    images_done = set(os.listdir(output_dir)) | set(os.listdir(discard_dir))
 
     clean = 0
     discarded = 0
-    skipped = 0
     for i, imfile in job_enumerate(images_dl):
-        if imfile in images_done:
-            skipped += 1
+        if imfile in images_cleaned:
+            clean += 1
+            continue
+        if imfile in images_discarded:
+            discarded += 1
             continue
         im = Image.open(join(input_dir, imfile))
         res = get_res(res)
-        im2 = resize_or_discard(im, res, should_clean=should_clean)
+        im2 = resize_or_discard(im, res, should_clean=True)
         if im2 is not None:
             fn, ext = os.path.splitext(imfile)
-            im2.save(join(output_dir, fn + '.jpg'), quality=QUALITY)
+            im2.save(join(out_dir_clean, fn + '.jpg'), quality=QUALITY)
             clean += 1
         else:
-            im.save(join(discard_dir, imfile))
+            im.save(join(out_dir_discard, imfile))
             discarded += 1
-        print('\r{} -> {} // Skipped {}/{}, Resized {}/{}, Discarded {}/{}'.format(
-                os.path.basename(input_dir), os.path.basename(output_dir),
-                skipped, N, clean, N, discarded, N), end='')
+        print(f'\r{os.path.basename(input_dir)} -> {os.path.basename(out_dir_clean)} // '
+              f'Resized: {clean}/{N}; Discarded: {discarded}/{N}', end='')
     # Done
-    print('\n{} -> {} // Skipped {}/{}, Resized {}/{}, Discarded {}/{} // Completed'.format(
-            input_dir, output_dir,
-            skipped, N, clean, N, discarded, N))
+    print(f'\n{os.path.basename(input_dir)} -> {os.path.basename(out_dir_clean)} // '
+          f'Resized: {clean}/{N}; Discarded: {discarded}/{N}')
 
 
 def resize_or_discard(im, res: int, verbose=False, should_clean=True):
