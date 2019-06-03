@@ -123,8 +123,6 @@ class MultiscaleTrainer(Trainer):
         # NOTE: if there are images in your training set with dimensions <128, training will abort at some point,
         # because the cropper failes. See REAME, section about data preparation.
         min_size = self.config_dl.crop_size
-        if min_size <= 128:
-            min_size = None
         ds_train = images_loader.IndexImagesDataset(
                 images=images_loader.ImagesCached(
                         self.config_dl.train_imgs_glob,

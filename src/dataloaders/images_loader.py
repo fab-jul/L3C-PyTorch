@@ -144,7 +144,7 @@ class ImagesCached(object):
         self.images_spec = os.path.expanduser(images_spec)
         self.cache_p = os.path.expanduser(cache_p)
         self.min_size = min_size
-        self.cache = ImagesCached._get_cache(cache_p)
+        self.cache = ImagesCached._get_cache(self.cache_p)
 
     def __str__(self):
         return f'ImagesCached(images_spec={self.images_spec})'
@@ -157,7 +157,9 @@ class ImagesCached(object):
         if key in self.cache:
             return self.cache[key]
         if self.cache_p:
-            print('INFO: Not in cache: {}'.format(key))
+            print(f'WARN: Given cache_p={self.cache_p}, but key not found:\n{key}')
+            available_keys = sorted(self.cache.keys())
+            print('Found:\n' + '\n'.join(map(str, available_keys)))
         return sorted(self._iter_imgs_unordered_filter_size())
 
     def update(self, force, verbose):
@@ -207,7 +209,10 @@ class ImagesCached(object):
 
     @staticmethod
     def _get_cache(cache_p):
-        if not cache_p or not os.path.isfile(cache_p):
+        if not cache_p:
+            return {}
+        if not os.path.isfile(cache_p):
+            print(f'cache_p={cache_p} does not exist.')
             return {}
         with open(cache_p, 'rb') as f:
             return pickle.load(f)
