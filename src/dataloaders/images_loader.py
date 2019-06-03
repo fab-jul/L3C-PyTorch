@@ -158,7 +158,7 @@ class ImagesCached(object):
             return self.cache[key]
         if self.cache_p:
             print(f'WARN: Given cache_p={self.cache_p}, but key not found:\n{key}')
-            available_keys = sorted(self.cache.keys())
+            available_keys = sorted(self.cache.keys(), key=lambda img_size: img_size[0])
             print('Found:\n' + '\n'.join(map(str, available_keys)))
         return sorted(self._iter_imgs_unordered_filter_size())
 
