@@ -141,7 +141,9 @@ class ImagesCached(object):
         :param min_size: if given, make sure to only return/cache images of the given size
         :return:
         """
-        self.images_spec = images_spec
+        self.images_spec = os.path.expanduser(images_spec)
+        if self.images_spec != images_spec:
+            print(f'Expanded {images_spec} -> {self.images_spec}')
         self.cache_p = cache_p
         self.min_size = min_size
         self.cache = ImagesCached._get_cache(cache_p)
