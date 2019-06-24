@@ -11,7 +11,7 @@ _CVPR'19 (oral presentation)_
 </div>
 
 
-## [[Paper]](https://arxiv.org/abs/1811.12817) [[Citation]](#citation)
+## [[Paper]](https://arxiv.org/abs/1811.12817) [[Citation]](#citation) [[Oral]](#oral) [[Poster]](#poster) [[FAQ]](#faq)
 
 ### Abstract
 
@@ -122,6 +122,41 @@ For clarity, we compare the new results as obtained by the **released code**, wi
 Here, _bpsp OI_ means bit per sub-pixel on Open Images Test.
 
 We did not re-train the ImageNet32 and ImageNet64 models.
+
+## Oral
+
+### [[Oral on Youtube]](https://youtu.be/PzALQZOy09c?t=60) [[Download Oral Slides]](http://data.vision.ee.ethz.ch/mentzerf/l3c_pdfs/l3c_oral_slides.pdf)
+
+## Poster
+
+### [[Download Poster PDF]](http://data.vision.ee.ethz.ch/mentzerf/l3c_pdfs/l3c_poster.pdf)
+
+## FAQ
+
+During the CVPR Poster session, the following where the most frequently asked questions:
+
+#### How can I learn a _lossless_ model with CNNs?
+
+First of all, to do lossless compression, you just need to know a probability distribution over your symbols. This is visualized in the bottom left of the poster. Given such a distribution, you can do entropy coding, for example [Huffman Coding](https://en.wikipedia.org/wiki/Huffman_coding).
+
+For natural images, we use the pixels of an image as the stream of symbols. Because they are not independent, we model the joint `p tilde (x_1, ..., x_N)` (see bottom left of poster). 
+
+Now, what Fig. 1 in the paper and the figure in the middle of the poster show is how we learn this p tilde. **The important thing to realize** is that the output of our model is p tilde, _it is not a quantized autoencoder_. Given this p tilde, we can do entropy coding. It doesn't matter that we have quantization in the network: no matter how bad p tilde is,
+you can always do lossless compression -- you might just use a lot of bits!
+
+Note that the model we learn (shown in Fig. 1), is used to get p tilde. We then use this to do entropy coding, as visualized on the top right of the poster or Fig. A4 in the paper.
+
+#### What does Adapative Arithmetic Coding mean?
+
+I'll explain this via [Huffman coding](https://en.wikipedia.org/wiki/Huffman_coding), as more people are familiar with that. In the default lossless compression case, we assume the symbols in our stream ("message") are all independent and identically distributed (i.i.d) according to p. We create one Huffman table for all symbols. Consider now the fruit in the bottom left of the poster. Imagine that they are not independent, but that e.g. apples are more likely to appear after bananas. In these cases, it makes sense to have different Huffman tables for different positions in the stream. We would call that "adaptive" Huffman coding. The table at some point in the stream would depend on the _conditional distribution of that symbol_.
+
+Adaptive Arithmetic coding is the same thing, except that we generalize [Arithmetic coding](https://en.wikipedia.org/wiki/Arithmetic_coding) to the non-i.i.d. case.
+
+This is also described in the Paper, in Section 3.1.
+
+#### Other questions?
+
+Feel free to write an email to us (E-Mail in paper) or open an issue here.
 
 
 ## Details about Code
