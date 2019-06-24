@@ -125,7 +125,7 @@ We did not re-train the ImageNet32 and ImageNet64 models.
 
 ## Oral
 
-### [[Oral on Youtube]](https://youtu.be/PzALQZOy09c?t=60) [[Download Oral Slides]](http://data.vision.ee.ethz.ch/mentzerf/l3c_pdfs/l3c_oral_slides.pdf)
+### [[Oral on Youtube]](https://youtu.be/PzALQZOy09c?t=63) [[Download Oral Slides]](http://data.vision.ee.ethz.ch/mentzerf/l3c_pdfs/l3c_oral_slides.pdf)
 
 ## Poster
 
