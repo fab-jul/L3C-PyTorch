@@ -32,7 +32,7 @@ conda create --name l3c_env python=3.7 pip --yes
 conda activate l3c_env
 ```
 
-We need PyTorch, CUDA, and some PIP packages:
+We need PyTorch, CUDA, and some PIP packages (If you don't have a GPU, remove `cudatoolkit=10.0`):
 
 ```
 conda install pytorch torchvision cudatoolkit=10.0 -c pytorch
