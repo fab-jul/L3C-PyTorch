@@ -263,31 +263,27 @@ The main part (arithmetic coding), is always on CPU.
 
 #### Compiling
 
-Make sure a recent `gcc` is available in `$PATH` (do `gcc --version`, tested with 5.5).
-For CUDA, make sure `nvcc -V` gives the desired version (tested with 9.0).
+_Step 1_: Make sure a **recent `gcc` is available** in `$PATH` by running `gcc --version` (tested with version 5.5).
+If you want CUDA support, make sure `nvcc -V` gives the desired version (tested with nvcc version 9.0).
 
-Then do:
-
-```bash
-conda activate l3c_env
-cd src/torchac
-COMPILE_CUDA=auto python setup.py
-```
-
+_Step 2_:
+ ```bash
+ conda activate l3c_env
+ cd src/torchac
+ COMPILE_CUDA=auto python setup.py install
+ ```
 - `COMPILE_CUDA=auto`: Use CUDA if a `gcc` between 5 and 6, and `nvcc` 9 is avaiable
 - `COMPILE_CUDA=force`: Use CUDA, don't check `gcc` or `nvcc`
 - `COMPILE_CUDA=no`: Don't use CUDA
-
-This installs a package called `torchac-backend-cpu` or `torchac-backend-gpu` in your `pip`. To test if it works,
-you can do
-
-```
-conda activate l3c_env
-cd src/torchac
-python -c "import torchac"
-```
-
-It should not print anything.
+This installs a package called `torchac-backend-cpu` or `torchac-backend-gpu` in your `pip`. 
+ 
+_Step 3_: To test if it works, you can do
+  ```
+ conda activate l3c_env
+ cd src/torchac
+ python -c "import torchac"
+ ```
+It should not print any error messages.
 
 
 ## Sampling
