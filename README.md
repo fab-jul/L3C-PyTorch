@@ -90,6 +90,8 @@ python test.py /path/to/logdir 0524_0001,0524_0002,0524_0003 /some/imgdir,/some/
     --names "L3C,RGB Shared,RGB" --recursive=auto
 ```
 
+For this, you need to download the models to some directory, in the example this is `/path/to/logdir`.
+
 To use the entropy coder and get timings for encoding/decoding, use `--write_to_files` (this needs `torchac`, 
 [see below](#the-torchac-module-fast-entropy-coding-in-pytorch)):
 
