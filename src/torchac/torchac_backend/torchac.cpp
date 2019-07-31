@@ -32,9 +32,6 @@
 #include <bitset>
 
 
-
-#define  COMPILE_CUDA 1
-
 using cdf_t = uint16_t;
 
 /** Encapsulates a pointer to a CDF tensor */
