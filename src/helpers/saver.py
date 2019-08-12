@@ -185,22 +185,28 @@ class Restorer(_CheckpointTracker):
     def restore_latest_persistent(self, net):
         return self.restore(net, self.get_lastest_persistent_ckpt())
 
-    def restore(self, modules, ckpt_p, strict=True):
+    def restore(self, modules, ckpt_p, strict=True, restore_restart=False):
         print('Restoring {}... (strict={})'.format(ckpt_p, strict))
         map_location = None if pe.CUDA_AVAILABLE else 'cpu'
         state_dicts = torch.load(ckpt_p, map_location=map_location)
         # ---
         for key, m in modules.items():
-            try:
-                # optim implements its own load_state_dict which does not have the `strict` keyword...
-                if isinstance(m, optimizer.Optimizer):
-                    m.load_state_dict(state_dicts[key])
+            # optim implements its own load_state_dict which does not have the `strict` keyword...
+            if isinstance(m, optimizer.Optimizer):
+                if restore_restart:
+                    print('Not restoring optimizer, --restore_restart given...')
                 else:
+                    try:
+                        m.load_state_dict(state_dicts[key])
+                    except ValueError as e:
+                        raise ValueError('Error while restoring Optimizer:', str(e))
+            else:
+                try:
                     m.load_state_dict(state_dicts[key], strict=strict)
-            except (ValueError, RuntimeError) as e:  # loading error. optim throws ValueError, the others RuntimeError
-                for n, module in sorted(m.named_modules()):
-                    print(n, module)
-                raise e
+                except RuntimeError as e:  # loading error
+                    for n, module in sorted(m.named_modules()):
+                        print(n, module)
+                    raise e
         return self.get_itr_from_ckpt_p(ckpt_p)
 
 

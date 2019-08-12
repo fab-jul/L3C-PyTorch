@@ -52,7 +52,7 @@ class TrainRestorer(Restorer):
     def restore_desired_ckpt(self, modules):
         itrc, ckpt_p = self.get_ckpt_for_itr(self.restore_itr)
         print('Restoring {}...'.format(itrc))
-        return self.restore(modules, ckpt_p, self.strict)
+        return self.restore(modules, ckpt_p, self.strict, restore_restart=self.restart_at_zero)
 
     def get_log_dir(self):
         log_dir = os.path.dirname(self._out_dir)  # should be .../logs/MMDD_HHdd config config config
