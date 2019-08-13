@@ -99,10 +99,13 @@ class MultiscaleBlueprint(vis.summarizable_module.SummarizableModule):
     @staticmethod
     def add_image_summaries(sw, out: Out, global_step, prefix):
         tag = lambda t: sw.pre(prefix, t)
+        is_train = prefix == 'train'
         for scale, (S_i, _, P_i, L_i) in enumerate(out.iter_all_scales(), 1):  # start from 1, as 0 is RGB
             sw.add_image(tag('bn/{}'.format(scale)), new_bottleneck_summary(S_i, L_i), global_step)
+            # This will only trigger for the final scale, where P_i is the uniform distribution.
+            # With this, we can check how accurate the uniform assumption is (hint: not very)
             is_logits = P_i.shape[1] == L_i
-            if is_logits:
+            if is_logits and is_train:
                 with sw.add_figure_ctx(tag('histo_out/{}'.format(scale)), global_step) as plt:
                     add_ps_summaries(S_i, get_p_y(P_i), L_i, plt)
 

@@ -113,7 +113,8 @@ class EDSRLikeEnc(vis.summarizable_module.SummarizableModule):
         to_q = [conv(Cf, C, 1)]
         if self.training:
             to_q.append(
-                vis.histogram_plot.HistogramPlot('train', 'histo/enc_{}_after_1x1'.format(scale), buffer_size=10,
+                # start scale from 1, as 0 is RGB
+                vis.histogram_plot.HistogramPlot('train', 'histo/enc_{}_after_1x1'.format(scale+1), buffer_size=10,
                                                  num_inputs_to_buffer=1, per_channel=False))
         self.to_q = nn.Sequential(*to_q)
 
