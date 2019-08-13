@@ -42,7 +42,7 @@ pip install -r pip_requirements.txt
 To test our entropy coding, **you must also install torchac**, as [described below](#the-torchac-module-fast-entropy-coding-in-pytorch).
 
 ##### Notes
-- We tested this code with Python 3.7 and PyTorch 1.1. Support for PyTorch 1.2 is tracked in #5.
+- We tested this code with Python 3.7 and PyTorch 1.1. Support for PyTorch 1.2 is tracked in [#5](https://github.com/fab-jul/L3C-PyTorch/issues/5).
 - The training code also works with PyTorch 0.4, but for testing, we use the `torchac` module, which
 needs PyTorch 1.0 or newer to build, [see below](#the-torchac-module-fast-entropy-coding-in-pytorch).
 - The code relies on `tensorboardX==1.2`, even though TensorBoard is now part of PyTorch (since 1.1)
