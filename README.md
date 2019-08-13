@@ -32,17 +32,17 @@ conda create --name l3c_env python=3.7 pip --yes
 conda activate l3c_env
 ```
 
-We need PyTorch, CUDA, and some PIP packages (If you don't have a GPU, remove `cudatoolkit=10.0`):
+We need PyTorch 1.1, CUDA, and some PIP packages (If you don't have a GPU, remove `cudatoolkit=10.0`):
 
 ```
-conda install pytorch torchvision cudatoolkit=10.0 -c pytorch
+conda install pytorch=1.1 torchvision cudatoolkit=10.0 -c pytorch
 pip install -r pip_requirements.txt
 ```
 
 To test our entropy coding, **you must also install torchac**, as [described below](#the-torchac-module-fast-entropy-coding-in-pytorch).
 
 ##### Notes
-- We tested this code with Python 3.7 and PyTorch 1.1
+- We tested this code with Python 3.7 and PyTorch 1.1. Support for PyTorch 1.2 is tracked in #5.
 - The training code also works with PyTorch 0.4, but for testing, we use the `torchac` module, which
 needs PyTorch 1.0 or newer to build, [see below](#the-torchac-module-fast-entropy-coding-in-pytorch).
 - The code relies on `tensorboardX==1.2`, even though TensorBoard is now part of PyTorch (since 1.1)
