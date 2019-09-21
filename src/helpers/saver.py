@@ -182,12 +182,16 @@ class Saver(_CheckpointTracker):
 
 
 class Restorer(_CheckpointTracker):
+    def __init__(self, out_dir=None, ckpt_name_fmt='ckpt_{:010d}.pt', tmp_postfix='.tmp', cpu_only=False):
+        super().__init__(out_dir, ckpt_name_fmt, tmp_postfix)
+        self.cpu_only = cpu_only
+
     def restore_latest_persistent(self, net):
         return self.restore(net, self.get_lastest_persistent_ckpt())
 
     def restore(self, modules, ckpt_p, strict=True, restore_restart=False):
         print('Restoring {}... (strict={})'.format(ckpt_p, strict))
-        map_location = None if pe.CUDA_AVAILABLE else 'cpu'
+        map_location = None if (pe.CUDA_AVAILABLE and not self.cpu_only) else 'cpu'
         state_dicts = torch.load(ckpt_p, map_location=map_location)
         # ---
         for key, m in modules.items():

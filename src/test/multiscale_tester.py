@@ -156,7 +156,6 @@ class MultiscaleTester(object):
             overwrite_cache
         """
         self.flags = flags
-
         test_log_dir_root = self.flags.log_dir.rstrip(os.path.sep) + '_test'
         global_config.reset()
 
@@ -176,7 +175,7 @@ class MultiscaleTester(object):
         blueprint.set_eval()
         self.blueprint = blueprint
 
-        self.restorer = saver.Restorer(paths.get_ckpts_dir(experiment_dir))
+        self.restorer = saver.Restorer(paths.get_ckpts_dir(experiment_dir), cpu_only = flags.cpu_only)
         self.restore_itr, ckpt_p = self.restorer.get_ckpt_for_itr(restore_itr)
         self.restorer.restore({'net': self.blueprint.net}, ckpt_p, strict=True)
 
@@ -338,6 +337,7 @@ class MultiscaleTester(object):
         assert_exc(not os.path.isfile(pout), f'{pout} exists. Consider --overwrite', EncodeError)
 
         img = self._read_img(img_p)
+        print(pe.DEVICE)
         img = img.to(pe.DEVICE)
 
         self.bc.encode(img, pout=pout)
