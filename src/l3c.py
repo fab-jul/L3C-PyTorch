@@ -18,7 +18,8 @@ along with L3C-PyTorch.  If not, see <https://www.gnu.org/licenses/>.
 """
 import pytorch_ext as pe
 import torch.backends.cudnn
-torch.backends.cudnn.benchmark = True
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 import argparse
 
