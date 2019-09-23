@@ -16,7 +16,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with L3C-PyTorch.  If not, see <https://www.gnu.org/licenses/>.
 """
-import pytorch_ext as pe
 import torch.backends.cudnn
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
@@ -45,7 +44,6 @@ def main():
 
     p.add_argument('--restore_itr', '-i', default=-1, type=int,
                    help='Which iteration to restore. -1 means latest iteration. Default: -1')
-    p.add_argument('--cpu_only', action='store_true')
 
     mode = p.add_subparsers(title='mode', dest='mode')
 
@@ -69,9 +67,6 @@ def main():
     dec.add_argument('out_p_png')
 
     flags = p.parse_args()
-
-    if(flags.cpu_only):
-        pe.DEVICE = "cpu"
 
     print('Testing {} at {} ---'.format(flags.log_date, flags.restore_itr))
     tester = MultiscaleTester(flags.log_date, _FakeFlags(flags), flags.restore_itr, l3c=True)
