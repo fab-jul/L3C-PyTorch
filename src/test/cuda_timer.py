@@ -31,7 +31,6 @@ _NO_CUDA_SYNC_OVERWRITE = int(os.environ.get('NO_CUDA_SYNC', 0)) == 1
 
 if _NO_CUDA_SYNC_OVERWRITE or not pe.CUDA_AVAILABLE:
     sync = lambda: None
-    print('***No CUDA syncs for timings')
 else:
     sync = torch.cuda.synchronize
 

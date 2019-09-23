@@ -90,6 +90,11 @@ def get_extension(cuda_support):
                 prefixed(prefix, ['torchac.cpp']))
 
 
+# TODO:
+# Add further supported version as specified in readme
+
+
+
 def _supported_compilers_available():
     """
     To see an up-to-date list of tested combinations of GCC and NVCC, see the README
@@ -104,6 +109,8 @@ def _supported_gcc_available():
 
 def supported_nvcc_available():
     v = _get_version(['nvcc', '-V'], 'release (.*?),')
+    if v is None:
+        return False, 'nvcc unavailable!'
     return LooseVersion(v) >= LooseVersion('9.0'), v
 
 

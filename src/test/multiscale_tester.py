@@ -17,6 +17,7 @@ You should have received a copy of the GNU General Public License
 along with L3C-PyTorch.  If not, see <https://www.gnu.org/licenses/>.
 """
 import os
+import sys
 import pytorch_ext as pe
 from PIL import Image
 import pickle
@@ -138,6 +139,21 @@ def _clean_cuda_cache(i):
         torch.cuda.empty_cache()
 
 
+def check_correct_torchac_backend_available():
+    try:
+        from torchac import torchac
+    except ImportError as e:
+        print(e)
+        print('--write_to_files requires torchac. See README.')
+        sys.exit(1)
+    if pe.CUDA_AVAILABLE and not torchac.CUDA_SUPPORTED:
+        raise ValueError('Found CUDA but torachac_backend_gpu not compiled. '
+                         'Either compile it or use CUDA_VISIBLE_DEVICES="". See also README')
+    if not pe.CUDA_AVAILABLE and not torchac.CPU_SUPPORTED:
+        raise ValueError('No CUDA found but torchac_backend_cpu not compiled. '
+                         'Compile it or set CUDA_VISIBLE_DEVICES appropriately. See also README.')
+
+
 class MultiscaleTester(object):
     def __init__(self, log_date, flags, restore_itr, l3c=False):
         """
@@ -194,6 +210,7 @@ class MultiscaleTester(object):
 
         # Import only if needed, as it imports torchac
         if self.flags.write_to_files:
+            check_correct_torchac_backend_available()
             from bitcoding.bitcoding import Bitcoding
             self.bc = Bitcoding(self.blueprint, times=self.times, compare_with_theory=self.flags.compare_theory)
         elif l3c:  # Called from l3c.py
