@@ -289,6 +289,7 @@ _Step 2_:
 - `COMPILE_CUDA=auto`: Use CUDA if a `gcc` between 5 and 6, and `nvcc` 9 is avaiable
 - `COMPILE_CUDA=force`: Use CUDA, don't check `gcc` or `nvcc`
 - `COMPILE_CUDA=no`: Don't use CUDA
+
 This installs a package called `torchac-backend-cpu` or `torchac-backend-gpu` in your `pip`. 
 Both can be installed simultaneously. See also next subsection.
 
@@ -303,10 +304,16 @@ It should not print any error messages.
 
 #### Selecting torchac: `torchac-backend-cpu` vs `torchac-backend-gpu` 
 
-Installing `torchac-backend-cpu` is easiest. However, if a GPU is available in the system, `torchac-backend-cpu` may not work
-because parts of the network will be transferred to the GPU. To fix this, `l3c.py` automatically selects whether the 
+Installing `torchac-backend-cpu` is easiest. However, if a GPU is available in the system, `torchac-backend-gpu` will be faster.
+
+If you use `l3c.py`, it will automatically select whether the 
 code should run on GPU or CPU depending on whether `torchac-backend-gpu` is available. The behavior of this can be 
-tuned with the `--device` flag to `l3c.py`, see `python l3c.py --help`.
+tuned with the `--device` flag to `l3c.py`, e.g., `python l3c.py --device=cpu enc ...`, see `python l3c.py --help`.
+
+If you use `test.py` with the `--write_to_files` flag, a check will be performed an exception will be thrown, if the wrong 
+combination of _CUDA available_ and _installed `torchac`_ exists. If you just have `torchac-backend-cpu` but a GPU in the system,
+disable it via `CUDA_VISIBLE_DEVICES="" python test.py ...`.
+
 
 ## Sampling
 
