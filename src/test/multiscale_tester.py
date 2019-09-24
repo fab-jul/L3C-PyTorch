@@ -143,9 +143,7 @@ def check_correct_torchac_backend_available():
     try:
         from torchac import torchac
     except ImportError as e:
-        print(e)
-        print('--write_to_files requires torchac. See README.')
-        sys.exit(1)
+        raise ValueError(f'Caught {e}. --write_to_files requires torchac. See README.')
     if pe.CUDA_AVAILABLE and not torchac.CUDA_SUPPORTED:
         raise ValueError('Found CUDA but torachac_backend_gpu not compiled. '
                          'Either compile it or use CUDA_VISIBLE_DEVICES="". See also README')

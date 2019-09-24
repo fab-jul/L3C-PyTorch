@@ -80,7 +80,7 @@ def main():
     p.add_argument('--device', type=str, choices=['auto', 'gpu', 'cpu'], default='auto',
                    help='Select the device to run this code on, as mentioned in the README section "Selecting torchac". '
                         'If DEVICE=auto, select torchac-backend depending on whether torchac-backend-gpu or -cpu is '
-                        'available. '
+                        'available. See function parse_device_flag for details.'
                         'If DEVICE=gpu or =cpu, force usage of this backend.')
 
     p.add_argument('--restore_itr', '-i', default=-1, type=int,
