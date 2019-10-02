@@ -42,7 +42,7 @@ pip install -r pip_requirements.txt
 To test our entropy coding, **you must also install torchac**, as [described below](#the-torchac-module-fast-entropy-coding-in-pytorch).
 
 ##### Notes
-- We tested this code with Python 3.7 and PyTorch 1.1. Support for PyTorch 1.2 is tracked in [#5](https://github.com/fab-jul/L3C-PyTorch/issues/5).
+- We tested this code with Python 3.7 and PyTorch 1.1. PyTorch 1.2 is _not supported_, but progress is tracked in [#5](https://github.com/fab-jul/L3C-PyTorch/issues/5).
 - The training code also works with PyTorch 0.4, but for testing, we use the `torchac` module, which
 needs PyTorch 1.0 or newer to build, [see below](#the-torchac-module-fast-entropy-coding-in-pytorch).
 - The code relies on `tensorboardX==1.2`, even though TensorBoard is now part of PyTorch (since 1.1)
@@ -93,7 +93,8 @@ python test.py /path/to/logdir 0524_0001,0524_0002,0524_0003 /some/imgdir,/some/
 For this, you need to download the models to some directory, in the example this is `/path/to/logdir`.
 
 To use the entropy coder and get timings for encoding/decoding, use `--write_to_files` (this needs `torchac`, 
-[see below](#the-torchac-module-fast-entropy-coding-in-pytorch)):
+[see below](#the-torchac-module-fast-entropy-coding-in-pytorch). If you did not compile `torchac` with CUDA support,
+disable CUDA by running `CUDA_VISIBLE_DEVICES="" python test.py ...`):
 
 ```
 python test.py /path/to/logdir 0524_0001 /some/imgdir --write_to_files=files_out_dir
@@ -253,12 +254,17 @@ A good starting point for optimizing the code would probably be the [`range_code
 implementation of
 [TFC](https://tensorflow.github.io/compression/).
 
+
+#### GPU and CPU support
+
 The module can be built with or without CUDA. The only difference between the CUDA and non-CUDA versions is:
 With CUDA, `_get_uint16_cdf` from `torchac.py` is done with a simple/non-optimized CUDA kernel (`torchac_kernel.cu`),
 which has one benefit: we can directly write into shared memory! This saves an expensive copying step from GPU to CPU.
 
-However, compiling with CUDA is probably a hassle. On our machines, it works with a GCC newer than version 5 but
-older than 6 (tested with 5.5), in combination with nvcc 9. We did not test other configurations, but they may work.
+However, compiling with CUDA is probably a hassle. We tested with
+- GCC 5.5 and NVCC 9.0
+- GCC 7.4 and NVCC 10.1 (update 2)
+- _Did not work_: GCC 6.0 and NVCC 9
 Please comment if you have insights into which other configurations work (or don't.)
 
 The main part (arithmetic coding), is always on CPU.
@@ -267,6 +273,12 @@ The main part (arithmetic coding), is always on CPU.
 
 _Step 1_: Make sure a **recent `gcc` is available** in `$PATH` by running `gcc --version` (tested with version 5.5).
 If you want CUDA support, make sure `nvcc -V` gives the desired version (tested with nvcc version 9.0).
+
+_Step 1b, macOS only_ (tested with 10.14): Set the following
+```bash
+export CC="clang++ -std=libc++"
+export MACOSX_DEPLOYMENT_TARGET=10.14
+```
 
 _Step 2_:
  ```bash
@@ -277,8 +289,10 @@ _Step 2_:
 - `COMPILE_CUDA=auto`: Use CUDA if a `gcc` between 5 and 6, and `nvcc` 9 is avaiable
 - `COMPILE_CUDA=force`: Use CUDA, don't check `gcc` or `nvcc`
 - `COMPILE_CUDA=no`: Don't use CUDA
+
 This installs a package called `torchac-backend-cpu` or `torchac-backend-gpu` in your `pip`. 
- 
+Both can be installed simultaneously. See also next subsection.
+
 _Step 3_: To test if it works, you can do
   ```
  conda activate l3c_env
@@ -286,6 +300,19 @@ _Step 3_: To test if it works, you can do
  python -c "import torchac"
  ```
 It should not print any error messages.
+
+
+#### Selecting torchac: `torchac-backend-cpu` vs `torchac-backend-gpu` 
+
+Installing `torchac-backend-cpu` is easiest. However, if a GPU is available in the system, `torchac-backend-gpu` will be faster.
+
+If you use `l3c.py`, it will automatically select whether the 
+code should run on GPU or CPU depending on whether `torchac-backend-gpu` is available. The behavior of this can be 
+tuned with the `--device` flag to `l3c.py`, e.g., `python l3c.py --device=cpu enc ...`, see `python l3c.py --help`.
+
+If you use `test.py` with the `--write_to_files` flag, a check will be performed an exception will be thrown, if the wrong 
+combination of _CUDA available_ and _installed `torchac`_ exists. If you just have `torchac-backend-cpu` but a GPU in the system,
+disable it via `CUDA_VISIBLE_DEVICES="" python test.py ...`.
 
 
 ## Sampling

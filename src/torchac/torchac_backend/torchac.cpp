@@ -261,7 +261,7 @@ py::bytes encode_logistic_mixture(
 
 /** See torchac.py */
 py::bytes encode_cdf(
-        const at::Tensor& cdf, /* NHWLp */
+        const at::Tensor& cdf, /* NHWLp, must be on CPU! */
         const at::Tensor& sym)
 {
     const auto cdf_ptr = get_cdf_ptr(cdf);

@@ -17,12 +17,18 @@ You should have received a copy of the GNU General Public License
 along with L3C-PyTorch.  If not, see <https://www.gnu.org/licenses/>.
 """
 import torch.backends.cudnn
-torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.deterministic = True
+
+import pytorch_ext as pe
 
 import argparse
 
 from test.multiscale_tester import MultiscaleTester, EncodeError, DecodeError
+
+
+# throws an exception if no backend available!
+from torchac import torchac
 
 
 class _FakeFlags(object):
@@ -36,11 +42,46 @@ class _FakeFlags(object):
             return None
 
 
+def parse_device_flag(flag):
+    print(f'Status: '
+          f'torchac-backend-gpu available: {torchac.CUDA_SUPPORTED} // '
+          f'torchac-backend-cpu available: {torchac.CPU_SUPPORTED} // '
+          f'CUDA available: {pe.CUDA_AVAILABLE}')
+    if flag == 'auto':
+        if torchac.CUDA_SUPPORTED and pe.CUDA_AVAILABLE:
+            flag = 'gpu'
+        elif torchac.CPU_SUPPORTED:
+            flag = 'cpu'
+        else:
+            raise ValueError('No suitable backend found!')
+
+    if flag == 'cpu' and not torchac.CPU_SUPPORTED:
+        raise ValueError('torchac-backend-cpu is not available. Please install.')
+    if flag == 'gpu' and not torchac.CUDA_SUPPORTED:
+        raise ValueError('torchac-backend-gpu is not available. Please install.')
+    if flag == 'gpu' and not pe.CUDA_AVAILABLE:
+        raise ValueError('Selected torchac-backend-gpu but CUDA not available!')
+
+    assert flag in ('gpu', 'cpu')
+    if flag == 'gpu' and not pe.CUDA_AVAILABLE:
+        raise ValueError('Selected GPU backend but cuda is not available!')
+
+    pe.CUDA_AVAILABLE = flag == 'gpu'
+    pe.set_device(pe.CUDA_AVAILABLE)
+    print(f'*** Using torchac-backend-{flag}; did set CUDA_AVAILABLE={pe.CUDA_AVAILABLE} and DEVICE={pe.DEVICE}')
+
+
 def main():
     p = argparse.ArgumentParser(description='Encoder/Decoder for L3C')
 
     p.add_argument('log_dir', help='Directory of experiments.')
     p.add_argument('log_date', help='A log_date, such as 0104_1345.')
+
+    p.add_argument('--device', type=str, choices=['auto', 'gpu', 'cpu'], default='auto',
+                   help='Select the device to run this code on, as mentioned in the README section "Selecting torchac". '
+                        'If DEVICE=auto, select torchac-backend depending on whether torchac-backend-gpu or -cpu is '
+                        'available. See function parse_device_flag for details.'
+                        'If DEVICE=gpu or =cpu, force usage of this backend.')
 
     p.add_argument('--restore_itr', '-i', default=-1, type=int,
                    help='Which iteration to restore. -1 means latest iteration. Default: -1')
@@ -67,6 +108,7 @@ def main():
     dec.add_argument('out_p_png')
 
     flags = p.parse_args()
+    parse_device_flag(flags.device)
 
     print('Testing {} at {} ---'.format(flags.log_date, flags.restore_itr))
     tester = MultiscaleTester(flags.log_date, _FakeFlags(flags), flags.restore_itr, l3c=True)
