@@ -86,7 +86,7 @@ def main():
     p.add_argument('--restore_itr', '-i', default=-1, type=int,
                    help='Which iteration to restore. -1 means latest iteration. Default: -1')
     p.add_argument('--use_patches', action='store_true')
-    p.add_argument('patch_size', default=32, type=int, 
+    p.add_argument('--patch_size', default=32, type=int, required=False,
                     help="Patch size to use when patch-wise compression is enabled.")
 
     mode = p.add_subparsers(title='mode', dest='mode')
