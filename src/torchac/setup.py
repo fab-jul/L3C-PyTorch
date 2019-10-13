@@ -90,21 +90,31 @@ def get_extension(cuda_support):
                 prefixed(prefix, ['torchac.cpp']))
 
 
-# TODO:
-# Add further supported version as specified in readme
-
-
-
 def _supported_compilers_available():
     """
-    To see an up-to-date list of tested combinations of GCC and NVCC, see the README
+        To see an up-to-date list of tested combinations of GCC and NVCC, see the README.
+
+        Uses python dictionary to be able to adapt to more supported compilers in the future.
     """
-    return _supported_gcc_available()[0] and supported_nvcc_available()[0]
+    # maps supported gcc version intervals to supported nvcc version intervals
+    supported_compilers = {
+        ("5.0", "6.0"): ("9.0", "10.0"),
+        ("7.4", "8.0"): ("10.1", "11")
+    }
+    # get compiler versions active on system
+    v_gcc = _get_version(['gcc', '-v'], r'version (.*?)\s+')
+    v_nvcc = _get_version(['nvcc', '-V'], 'release (.*?),')
 
+    # if no nvcc is found on system, CUDA can not be compiled
+    if v_nvcc is None:
+        return False
 
-def _supported_gcc_available():
-    v = _get_version(['gcc', '-v'], r'version (.*?)\s+')
-    return LooseVersion('6.0') > LooseVersion(v) >= LooseVersion('5.0'), v
+    for gcc_range in supported_compilers:
+        if LooseVersion(gcc_range[0]) <= v_gcc < LooseVersion(gcc_range[1]):
+            nvcc_range = supported_compilers[gcc_range]
+            if LooseVersion(nvcc_range[0] <= v_nvcc < LooseVersion(gcc_range[1])):
+                return True
+    return False
 
 
 def supported_nvcc_available():
