@@ -86,6 +86,8 @@ def main():
     p.add_argument('--restore_itr', '-i', default=-1, type=int,
                    help='Which iteration to restore. -1 means latest iteration. Default: -1')
     p.add_argument('--use_patches', action='store_true')
+    p.add_argument('patch_size', default=32, type=int, 
+                    help="Patch size to use when patch-wise compression is enabled.")
 
     mode = p.add_subparsers(title='mode', dest='mode')
 
@@ -116,12 +118,12 @@ def main():
 
     if flags.mode == 'enc':
         try:
-            tester.encode(flags.img_p, flags.out_p, flags.overwrite, flags.use_patches)
+            tester.encode(flags.img_p, flags.out_p, flags.overwrite, flags.use_patches, flags.patch_size)
         except EncodeError as e:
             print('*** EncodeError:', e)
     else:
         try:
-            tester.decode(flags.img_p, flags.out_p_png, flags.use_patches)
+            tester.decode(flags.img_p, flags.out_p_png, flags.use_patches, flags.patch_size)
         except DecodeError as e:
             print('*** DecodeError:', e)
 

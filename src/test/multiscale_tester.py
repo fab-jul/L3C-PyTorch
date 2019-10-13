@@ -345,7 +345,7 @@ class MultiscaleTester(object):
 
         return info
 
-    def encode(self, img_p, pout, overwrite=False, use_patches=False):
+    def encode(self, img_p, pout, overwrite=False, use_patches=False, patch_size = 32):
         pout_dir = os.path.dirname(os.path.abspath(pout))
         assert_exc(os.path.isdir(pout_dir), f'pout directory ({pout_dir}) does not exists!', EncodeError)
         if overwrite and os.path.isfile(pout):
@@ -359,21 +359,20 @@ class MultiscaleTester(object):
 
             self.bc.encode(img, pout=pout)
         else:
-            self.encode_patches(img_p, pout)
+            self.encode_patches(img_p, pout, patch_size)
         print('---\nSaved:', pout)
 
-    def encode_patches(self, img_p, pout):
-        PATCH_SIZE = 32
+    def encode_patches(self, img_p, pout, patch_size):
         img = self._read_img(img_p)
         img = img.to(pe.DEVICE)
 
-        width = img.shape[2] // PATCH_SIZE
-        height = img.shape[3] // PATCH_SIZE
+        width = img.shape[2] // patch_size
+        height = img.shape[3] // patch_size
 
         file_names = []
         for i in range(width):
             for j in range(height):
-                patch = img[:, :, i*PATCH_SIZE:(i+1)*PATCH_SIZE, j*PATCH_SIZE:(j+1)*PATCH_SIZE]
+                patch = img[:, :, i*patch_size:(i+1)*patch_size, j*patch_size:(j+1)*patch_size]
                 file_names.append("/tmp/patch_{}_{}.l3c".format(i, j))
                 self.bc.encode(patch, file_names[-1])
 
@@ -392,7 +391,7 @@ class MultiscaleTester(object):
         with open(pout, "wb+") as fp:
             fp.write(arr)
 
-    def decode(self, pin, png_out_p, use_patches=False):
+    def decode(self, pin, png_out_p, use_patches=False, patch_size=32):
         """
         Decode L3C-encoded file at `pin` to a PNG at `png_out_p`.
         """
@@ -404,11 +403,10 @@ class MultiscaleTester(object):
 
             self._write_img(decoded, png_out_p)
         else:
-            self.decode_patches(pin, png_out_p)
+            self.decode_patches(pin, png_out_p, patch_size)
         print(f'---\nDecoded: {png_out_p}')
 
-    def decode_patches(self, pin, png_out_p):
-        PATCH_SIZE = 32
+    def decode_patches(self, pin, png_out_p, patch_size):
         with open(pin, "rb") as fp:
             content = fp.read()
             fp.close()
@@ -425,7 +423,7 @@ class MultiscaleTester(object):
         # only decode actual content!
         content = content[idx+1:]
         # prepare output image tensor with full resolution
-        img = torch.zeros((1, 3, width*PATCH_SIZE, height*PATCH_SIZE))
+        img = torch.zeros((1, 3, width*patch_size, height*patch_size))
         for i in range(width):
             for j in range(height):
                 idx = i * height + j
@@ -436,8 +434,8 @@ class MultiscaleTester(object):
                 with open(tmp_path, "wb+") as fp:
                     fp.write(curr)
 
-                img[:, :, i*PATCH_SIZE:(i+1)*PATCH_SIZE, 
-                    j*PATCH_SIZE:(j+1)*PATCH_SIZE] = self.bc.decode(tmp_path)
+                img[:, :, i*patch_size:(i+1)*patch_size, 
+                    j*patch_size:(j+1)*patch_size] = self.bc.decode(tmp_path)
         
         self._write_img(img, png_out_p)
 
