@@ -16,6 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with L3C-PyTorch.  If not, see <https://www.gnu.org/licenses/>.
 """
+import ast
 import os
 import sys
 import pytorch_ext as pe
@@ -344,7 +345,7 @@ class MultiscaleTester(object):
 
         return info
 
-    def encode(self, img_p, pout, overwrite=False):
+    def encode(self, img_p, pout, overwrite=False, use_patches=False):
         pout_dir = os.path.dirname(os.path.abspath(pout))
         assert_exc(os.path.isdir(pout_dir), f'pout directory ({pout_dir}) does not exists!', EncodeError)
         if overwrite and os.path.isfile(pout):
@@ -352,24 +353,93 @@ class MultiscaleTester(object):
             os.remove(pout)
         assert_exc(not os.path.isfile(pout), f'{pout} exists. Consider --overwrite', EncodeError)
 
+        if not use_patches:
+            img = self._read_img(img_p)
+            img = img.to(pe.DEVICE)
+
+            self.bc.encode(img, pout=pout)
+        else:
+            self.encode_patches(img_p, pout)
+        print('---\nSaved:', pout)
+
+    def encode_patches(self, img_p, pout):
+        PATCH_SIZE = 32
         img = self._read_img(img_p)
         img = img.to(pe.DEVICE)
 
-        self.bc.encode(img, pout=pout)
-        print('---\nSaved:', pout)
+        width = img.shape[2] // PATCH_SIZE
+        height = img.shape[3] // PATCH_SIZE
 
-    def decode(self, pin, png_out_p):
+        file_names = []
+        for i in range(width):
+            for j in range(height):
+                patch = img[:, :, i*PATCH_SIZE:(i+1)*PATCH_SIZE, j*PATCH_SIZE:(j+1)*PATCH_SIZE]
+                file_names.append("/tmp/patch_{}_{}.l3c".format(i, j))
+                self.bc.encode(patch, file_names[-1])
+
+        content = bytes()
+        lens = []
+        for file_name in file_names:
+            with open(file_name, "rb") as fp:
+                curr_content = fp.read()
+                lens.append(len(curr_content))
+                content += curr_content
+
+        meta = [width, height] + lens
+        arr = bytearray()
+        arr.extend((str(meta)+"\n").encode("latin-1"))
+        arr.extend(content)
+        with open(pout, "wb+") as fp:
+            fp.write(arr)
+
+    def decode(self, pin, png_out_p, use_patches=False):
         """
         Decode L3C-encoded file at `pin` to a PNG at `png_out_p`.
         """
         pout_dir = os.path.dirname(os.path.abspath(png_out_p))
         assert_exc(os.path.isdir(pout_dir), f'png_out_p directory ({pout_dir}) does not exists!', DecodeError)
         assert_exc(png_out_p.endswith('.png'), f'png_out_p must end in .png, got {png_out_p}', DecodeError)
+        if not use_patches:
+            decoded = self.bc.decode(pin)
 
-        decoded = self.bc.decode(pin)
-
-        self._write_img(decoded, png_out_p)
+            self._write_img(decoded, png_out_p)
+        else:
+            self.decode_patches(pin, png_out_p)
         print(f'---\nDecoded: {png_out_p}')
+
+    def decode_patches(self, pin, png_out_p):
+        PATCH_SIZE = 32
+        with open(pin, "rb") as fp:
+            content = fp.read()
+            fp.close()
+        linebreak = "\n".encode("latin-1")
+        idx = content.index(linebreak)
+        meta = content[:idx].decode("ascii")
+        meta = ast.literal_eval(meta)
+        width, height = meta[:2]
+        lens = meta[2:]
+        acc_lens = [0]
+        for i in range(0, len(lens)):
+            acc_lens.append(acc_lens[-1] + lens[i])
+
+        # only decode actual content!
+        content = content[idx+1:]
+        # prepare output image tensor with full resolution
+        img = torch.zeros((1, 3, width*PATCH_SIZE, height*PATCH_SIZE))
+        for i in range(width):
+            for j in range(height):
+                idx = i * height + j
+                curr = content[acc_lens[idx]:acc_lens[idx+1]]
+                
+                # use temporary file to use established bitcoding procedure
+                tmp_path = "/tmp/patch_tmp.l3c"
+                with open(tmp_path, "wb+") as fp:
+                    fp.write(curr)
+
+                img[:, :, i*PATCH_SIZE:(i+1)*PATCH_SIZE, 
+                    j*PATCH_SIZE:(j+1)*PATCH_SIZE] = self.bc.decode(tmp_path)
+        
+        self._write_img(img, png_out_p)
 
     def _read_img(self, img_p):
         img = np.array(Image.open(img_p)).transpose(2, 0, 1)  # Turn into CHW

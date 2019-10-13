@@ -85,6 +85,7 @@ def main():
 
     p.add_argument('--restore_itr', '-i', default=-1, type=int,
                    help='Which iteration to restore. -1 means latest iteration. Default: -1')
+    p.add_argument('--use_patches', action='store_true')
 
     mode = p.add_subparsers(title='mode', dest='mode')
 
@@ -115,12 +116,12 @@ def main():
 
     if flags.mode == 'enc':
         try:
-            tester.encode(flags.img_p, flags.out_p, flags.overwrite)
+            tester.encode(flags.img_p, flags.out_p, flags.overwrite, flags.use_patches)
         except EncodeError as e:
             print('*** EncodeError:', e)
     else:
         try:
-            tester.decode(flags.img_p, flags.out_p_png)
+            tester.decode(flags.img_p, flags.out_p_png, flags.use_patches)
         except DecodeError as e:
             print('*** DecodeError:', e)
 
