@@ -350,6 +350,17 @@ python l3c.py /path/to/logdir 0524_0001 enc /path/to/img out.l3c
 python l3c.py /path/to/logdir 0524_0001 dec out.l3c decoded.png
 ```
 
+Due to limitations of GPU memory and RAM, a *patch-wise* compression is implemented. The input image is divided into NxM image patches, which are encoded separately into the corresponding .l3c file. Images of arbitrary size can be compressed in this mode (tested up to 6000x4000 pixels).
+
+The compression rate is slightly worse than with full-image compression, because the features which span multiple patches can not be detected.
+
+```bash
+# Encode to out.l3c
+python l3c.py --use_patches /path/to/logdir 0524_0001 enc /path/to/img out.l3c
+# Decode from out.l3c, save to decoded.png
+python l3c.py --use_patches /path/to/logdir 0524_0001 dec out.l3c decoded.png
+```
+
 ## Prepare Open Images for Training
 
 ### Option 1: The Easy Way
