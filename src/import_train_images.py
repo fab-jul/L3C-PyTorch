@@ -20,7 +20,6 @@ import argparse
 import multiprocessing
 import os
 import random
-import shutil
 import time
 import warnings
 from os.path import join
@@ -44,6 +43,9 @@ except ImportError:
     job_enumerate = enumerate
 
 warnings.filterwarnings("ignore")
+
+
+random.seed(123)
 
 
 _NUM_PROCESSES = int(os.environ.get('NUM_PROCESS', 16))
