@@ -40,7 +40,7 @@ VAL=validation
 DOWNLOAD_DIR=$DATA_DIR/download
 mkdir -p $DOWNLOAD_DIR
 pushd $DOWNLOAD_DIR
-for DIR in $TRAIN_0 $TRAIN_1 $TRAIN_2 $VAL; do
+for DIR in $TRAIN_0 $TRAIN_1 $TRAIN_2; do
     TAR=${DIR}.tar.gz
     if [ ! -f "$TAR" ]; then
         echo "Downloading $TAR..."
@@ -50,7 +50,7 @@ for DIR in $TRAIN_0 $TRAIN_1 $TRAIN_2 $VAL; do
     fi
 done
 
-for DIR in $TRAIN_0 $TRAIN_1 $TRAIN_2 $VAL; do
+for DIR in $TRAIN_0 $TRAIN_1 $TRAIN_2; do
     TAR=${DIR}.tar.gz
     if [ -d $DIR ]; then
         echo "Found $DIR, not unpacking $TAR..."
