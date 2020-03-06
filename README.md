@@ -23,6 +23,11 @@ As a result, L3C obtains over two orders of magnitude speedups when sampling com
 Furthermore, we find that learning the auxiliary representation is crucial and outperforms predefined auxiliary representations such as an RGB pyramid significantly.
 
 
+## Version 3
+
+This is an updated version of the repo. See issue #14 for details.
+
+
 ## Prerequisites for Code
 
 Clone the repo and create a conda environment as follows:
@@ -54,9 +59,9 @@ We release the following trained models:
 
 |     | Name | Training Set | ID  | Download Model |
 | --- | ---- | ------------ | --- | --------- |
-| Main Model | L3C | [Open Images](#prepare-open-images-for-training) | `0306_0001` | [L3C.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models_v2/L3C.tar.gz) |
-| Baseline | RGB Shared | Open Images | `0306_0002` | [RGB_Shared.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models_v2/RGB_Shared.tar.gz) |
-| Baseline | RGB | Open Images | `0306_0003` | [RGB.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models_v2/RGB.tar.gz) |
+| Main Model | L3C | [Open Images](#prepare-open-images-for-training) | `0306_0001` | [L3C.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models_v3/L3C.tar.gz) |
+| Baseline | RGB Shared | Open Images | `0306_0002` | [RGB_Shared.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models_v3/RGB_Shared.tar.gz) |
+| Baseline | RGB | Open Images | `0306_0003` | [RGB.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models_v3/RGB.tar.gz) |
 | Main Model | L3C | [ImageNet32](http://image-net.org/download-images)    | `0524_0004` | [L3C_inet32.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models/L3C_inet32.tar.gz) |
 | Main Model | L3C | [ImageNet64](http://image-net.org/download-images)    | `0524_0005` | [L3C_inet64.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models/L3C_inet64.tar.gz) |
 
@@ -102,10 +107,11 @@ python test.py /path/to/logdir 0306_0001 /some/imgdir --write_to_files=files_out
 
 More flags available with `python test.py -h`.
 
-#### Open Images 500
+#### Evaluation on Open Images
 
 We evaluated our model on 500 images randomly selected from the Open Images validation set, and preprocessed like the 
-training data. [Download Open Images 500](http://data.vision.ee.ethz.ch/mentzerf/validation_sets_lossless/val_oi_500_r.tar.gz)
+training data. To compare, please 
+[download Open Images evaluation set here](http://data.vision.ee.ethz.ch/mentzerf/validation_sets_lossless/val_oi_500_r.tar.gz).
 
 #### Adaptive Cropping
 
