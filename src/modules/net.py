@@ -144,7 +144,7 @@ class EDSRLikeEnc(vis.summarizable_module.SummarizableModule):
         x = self.to_q(x)
         # assert self.summarizer is not None
         x_soft, x_hard, symbols_hard = self.q(x)
-        # TODO: To support nn.DataParallel, this must be changed, as it not a tensor
+        # TODO(parallel): To support nn.DataParallel, this must be changed, as it not a tensor
         return EncOut(x_soft, x_hard, symbols_hard, self.L, F)
 
 
@@ -180,7 +180,7 @@ class EDSRDec(nn.Module):
             x = x + features_to_fuse
         x = self.body(x) + x
         x = self.tail(x)
-        # TODO: To support nn.DataParallel, this must be changed, as it not a tensor
+        # TODO(parallel): To support nn.DataParallel, this must be changed, as it not a tensor
         return DecOut(x)
 
 

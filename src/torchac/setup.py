@@ -94,7 +94,6 @@ def get_extension(cuda_support):
 # Add further supported version as specified in readme
 
 
-
 def _supported_compilers_available():
     """
     To see an up-to-date list of tested combinations of GCC and NVCC, see the README

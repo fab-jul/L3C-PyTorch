@@ -330,7 +330,7 @@ def log_prob_from_logits(logit_probs):
     return logit_probs - m - torch.log(torch.sum(torch.exp(logit_probs - m), dim=1, keepdim=True))
 
 
-# TODO: replace with pytorch internal in 1.0, there is a bug in 0.4.1
+# TODO(pytorch): replace with pytorch internal in 1.0, there is a bug in 0.4.1
 def log_softmax(logit_probs, dim):
     """ numerically stable log_softmax implementation that prevents overflow """
     m, _ = torch.max(logit_probs, dim=dim, keepdim=True)
