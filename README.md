@@ -54,9 +54,9 @@ We release the following trained models:
 
 |     | Name | Training Set | ID  | Download Model |
 | --- | ---- | ------------ | --- | --------- |
-| Main Model | L3C | [Open Images](#prepare-open-images-for-training) | `0524_0001` | [L3C.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models/L3C.tar.gz) |
-| Baseline | RGB Shared | Open Images | `0524_0002` | [RGB_Shared.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models/RGB_Shared.tar.gz) |
-| Baseline | RGB | Open Images | `0524_0003` | [RGB.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models/RGB.tar.gz) |
+| Main Model | L3C | [Open Images](#prepare-open-images-for-training) | `0306_0001` | [L3C.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models_v2/L3C.tar.gz) |
+| Baseline | RGB Shared | Open Images | `0306_0002` | [RGB_Shared.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models_v2/RGB_Shared.tar.gz) |
+| Baseline | RGB | Open Images | `0306_0003` | [RGB.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models_v2/RGB.tar.gz) |
 | Main Model | L3C | [ImageNet32](http://image-net.org/download-images)    | `0524_0004` | [L3C_inet32.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models/L3C_inet32.tar.gz) |
 | Main Model | L3C | [ImageNet64](http://image-net.org/download-images)    | `0524_0005` | [L3C_inet64.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models/L3C_inet64.tar.gz) |
 
@@ -86,7 +86,7 @@ slightly: In `net.py`, `EncOut` and `DecOut` are `namedtuple`s, which is not sup
 To test an [experiment](#experiments), use `test.py`. For example, to test L3C and the baselines, run
 
 ```
-python test.py /path/to/logdir 0524_0001,0524_0002,0524_0003 /some/imgdir,/some/other/imgdir \
+python test.py /path/to/logdir 0306_0001,0306_0002,0306_0003 /some/imgdir,/some/other/imgdir \
     --names "L3C,RGB Shared,RGB" --recursive=auto
 ```
 
@@ -97,17 +97,35 @@ To use the entropy coder and get timings for encoding/decoding, use `--write_to_
 disable CUDA by running `CUDA_VISIBLE_DEVICES="" python test.py ...`):
 
 ```
-python test.py /path/to/logdir 0524_0001 /some/imgdir --write_to_files=files_out_dir
+python test.py /path/to/logdir 0306_0001 /some/imgdir --write_to_files=files_out_dir
 ```
 
 More flags available with `python test.py -h`.
 
+#### Open Images 500
+
+We evaluated our model on 500 images randomly selected from the Open Images validation set, and preprocessed like the 
+training data. [Download Open Images 500](TODO(release))
+
+#### Adaptive Cropping
+
+The evaluation code automatically split images that are too big into non-overlapping crops. By default,
+the threshold is set to images bigger than `2000 * 1500` pixels in total. This can be overwritten by 
+setting `AC_NEEDS_CROP_DIM` from the console, e.g.,
+
+```
+AC_NEEDS_CROP_DIM=2000,2000 python test.py ...
+```
+
+See `auto_crop.py` for details.
+
+
+<!--
 ### Results
 
 When preparing this repo, we found that removing one approximation in the loss originally introduced by the PixelCNN++
  code slightly improved the final bitrates of L3C, while performance of the baselines got slightly worse.
 
-<!-- TODO: add CR link -->
 
 The code contains the loss without the approximation.
 We note that [arXiv v2](https://arxiv.org/abs/1811.12817v2) is the same as CVPR Camera Ready version, and the results in there where obtained
@@ -125,6 +143,7 @@ For clarity, we compare the new results as obtained by the **released code**, wi
 Here, _bpsp OI_ means bit per sub-pixel on Open Images Test.
 
 We did not re-train the ImageNet32 and ImageNet64 models.
+-->
 
 ## Oral
 
@@ -320,7 +339,7 @@ disable it via `CUDA_VISIBLE_DEVICES="" python test.py ...`.
 To sample from L3C, use `test.py` with `--sample`:
 
 ```bash
-python test.py /path/to/logdir 0524_0001 /some/imgdir --sample=samples
+python test.py /path/to/logdir 0306_0001 /some/imgdir --sample=samples
 ```
 
 This produces outputs in a directory `samples`. Per image, you'll get something like
@@ -345,14 +364,12 @@ To encode/decode a single image, use `l3c.py`. This requires `torchac`:
 
 ```bash
 # Encode to out.l3c
-python l3c.py /path/to/logdir 0524_0001 enc /path/to/img out.l3c
+python l3c.py /path/to/logdir 0306_0001 enc /path/to/img out.l3c
 # Decode from out.l3c, save to decoded.png
-python l3c.py /path/to/logdir 0524_0001 dec out.l3c decoded.png
+python l3c.py /path/to/logdir 0306_0001 dec out.l3c decoded.png
 ```
 
 ## Prepare Open Images for Training
-
-### Option 1: The Easy Way
 
 Use the `prep_openimages.sh` script. Run it in an environment with
 Python 3,
@@ -362,13 +379,19 @@ Python 3,
 cd src
 ./prep_openimages.sh <DATA_DIR>
 ```
+**NOTE**: The preprocessing may take a long time. We run it over our internal CPU cluster. Please see 
+`import_train_images.py` for tips on how to incorporate your own cluster.
+
 This will download all images to `DATA_DIR`. Make sure there is enough space there, as **this script will create 
 around 300 GB of data**. Also, it will probably run for a few hours.
 
-After `./prep_openimages.sh` is done, everything is in `DATA_DIR/train_oi` and `DATA_DIR/val_oi`. Follow the 
+After `./prep_openimages.sh` is done, training data is in `DATA_DIR/train_oi` and `DATA_DIR/val_oi`. Follow the 
 instructions printed by `./prep_openimages.sh` to update the config file. You may `rm -rf DATA_DIR/download` and 
 `rm -rf DATA_DIR/imported` to free up some space.
 
+(Optional) It helps to have one fixed validation image to monitor training. You may put any image at
+
+<!--
 ### Option 2: Step by Step
 
 1. Download [Open Images training sets and validation set](https://github.com/cvdfoundation/open-images-dataset#download-images-with-bounding-boxes-annotations),
@@ -403,17 +426,12 @@ package. To speed this up, you can distribute it on some server, by implementing
 if you did not, set `image_cache_pkl = None`. Finally, update `val_glob = 'data/validation_oi'`.
 1. (Optional) It helps to have one fixed validation image to monitor training. You may put any image at
 `src/train/fixedimg.jpg` and it will be used for that (see `multiscale_trainer.py`).
+-->
 
 ## Future Work for Code
 
 - Add support for `nn.DataParallel`.
 - Incorporate TensorBoard support from PyTorch, instead of pip package.
-
-## Paper Errata
-
-- p.6: "On ImageNet32/64, we increase the batch size to 120 [...]."
-&rarr; Batch size is actually also 30, like for the other experiments.
-- p.13, Fig A2: There should not be any arrows between predictors `D(1)`, because we only train one predictor.
 
 ## Citation
 
