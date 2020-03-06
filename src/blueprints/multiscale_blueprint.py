@@ -61,13 +61,14 @@ class MultiscaleBlueprint(vis.summarizable_module.SummarizableModule):
         """
         return self.net(in_batch, auto_recurse)
 
-    def get_loss(self, out: Out, num_subpixels_before_pad=None):
+    def get_loss(self, out: Out, num_subpixels_before_pad=None) -> MultiscaleLoss:
         """
         :param num_subpixels_before_pad: If given, calculate bpsp with this, instead of num_pixels returned by self.losses.
         This is needed because while testing, we have to pad images. To calculate the correct bpsp, we need to
         calcualte it with respect to the actual (non-padded) number of pixels
         :returns instance of MultiscaleLoss, see above.
         """
+        # `costs`: a list, containing the cost of each scale, in nats
         costs, final_cost_uniform, num_subpixels = self.losses.get(out)
         if num_subpixels_before_pad:
             assert num_subpixels_before_pad <= num_subpixels, num_subpixels_before_pad
@@ -82,16 +83,16 @@ class MultiscaleBlueprint(vis.summarizable_module.SummarizableModule):
 
         # all bpsps corresponding to non-recursive scales, including final (uniform-prior) cost
         nonrecursive_bpsps = costs_bpsp[:out.auto_recursive_from] + [final_cost_uniform / conversion]
-        # all bpsps corresponding to non-recursive AND recursive scales, including final cost
-        recursive_bpsps   = (costs_bpsp                           + [out.get_nat_count(-1) / conversion]
-                             if out.auto_recursive_from is not None
-                             else None)
+        if out.auto_recursive_from is not None:
+            # all bpsps corresponding to non-recursive AND recursive scales, including final cost
+            recursive_bpsps = costs_bpsp + [out.get_nat_count(-1) / conversion]
+        else:
+            recursive_bpsps = None
 
         # loss is everything without final (uniform-prior) scale
         total_bpsp_without_final = sum(costs_bpsp)
         loss_pc = total_bpsp_without_final
-        return MultiscaleLoss(loss_pc,
-                              nonrecursive_bpsps, recursive_bpsps)
+        return MultiscaleLoss(loss_pc, nonrecursive_bpsps, recursive_bpsps)
 
     def sample_forward(self, in_batch, sample_scales, partial_final=None):
         return self.net.sample_forward(in_batch, self.losses, sample_scales, partial_final)
@@ -117,8 +118,11 @@ class MultiscaleBlueprint(vis.summarizable_module.SummarizableModule):
         return [image_summaries.to_image(s[:, c, ...]) for c in range(s.shape[1])]
 
     @staticmethod
-    def unpack_batch_pad(img_or_imgbatch, fac):
-        raw = img_or_imgbatch['raw']  # uint8
+    def unpack_batch_pad(raw, fac):
+        """
+        :param raw: uint8, input image.
+        :param fac: downscaling factor we will use, used to determine proper padding.
+        """
         if len(raw.shape) == 3:
             raw.unsqueeze_(0)  # add batch dim
         assert len(raw.shape) == 4
@@ -130,8 +134,12 @@ class MultiscaleBlueprint(vis.summarizable_module.SummarizableModule):
 
     @staticmethod
     def pad(raw, fac):
-        raw, _ = pad(raw, fac, mode='constant')
+        raw, _ = pad(raw, fac, mode=MultiscaleBlueprint.get_padding_mode())
         return raw
+
+    @staticmethod
+    def get_padding_mode():
+        return 'constant'
 
     @staticmethod
     def unpack(img_batch):

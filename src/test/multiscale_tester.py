@@ -16,8 +16,11 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with L3C-PyTorch.  If not, see <https://www.gnu.org/licenses/>.
 """
+import collections
 import os
 import sys
+
+import auto_crop
 import pytorch_ext as pe
 from PIL import Image
 import pickle
@@ -32,7 +35,8 @@ from fjcommon import functools_ext as ft, config_parser, no_op
 from fjcommon.assertions import assert_exc
 from torchvision import transforms
 
-from blueprints.multiscale_blueprint import MultiscaleBlueprint
+from bitcoding import part_suffix_helper
+from blueprints.multiscale_blueprint import MultiscaleBlueprint, MultiscaleLoss
 from dataloaders.images_loader import IndexImagesDataset
 from helpers import paths, saver, logdir_helpers
 from helpers.config_checker import DEFAULT_CONFIG_DIR
@@ -130,12 +134,12 @@ def _parse_recursive_flag(recursive, config_ms):
 
 def _clean_cuda_cache(i):
     if i % 25 == 0 and torch.cuda.is_available():
-        print()
-        print('{:,} {:,} {:,} {:,}'.format(
-                torch.cuda.max_memory_allocated(),
-                torch.cuda.memory_allocated(),
-                torch.cuda.max_memory_cached(),
-                torch.cuda.memory_cached()))
+        # print()
+        # print('{:,} {:,} {:,} {:,}'.format(
+        #         torch.cuda.max_memory_allocated(),
+        #         torch.cuda.memory_allocated(),
+        #         torch.cuda.max_memory_cached(),
+        #         torch.cuda.memory_cached()))
         torch.cuda.empty_cache()
 
 
@@ -237,6 +241,7 @@ class MultiscaleTester(object):
                 for testset, result in zip(testsets, results)]
 
     def test(self, testset):
+        # _clean_cuda_cache(0)
         test_id = TestID(testset.id, self.restore_itr)
         return_cache = (not self.flags.overwrite_cache and
                         not self.flags.write_to_files and
@@ -265,12 +270,10 @@ class MultiscaleTester(object):
                 to_tensor_transform=transforms.Compose(to_tensor_transform))
 
     def _test(self, ds):
-        # If we write to file, we do not store any TestResult
-        test_result = (TestResult(metric_name='bpsp recursive' if self.recursive else 'bpsp')
-                       if not self.flags.write_to_files
-                       else None)
+        metric_name = 'bpsp recursive' if self.recursive else 'bpsp'
+        test_result = TestResult(metric_name)
 
-        # If we sample, we store the result with a ImageSaver
+        # If we sample, we store the result with a ImageSaver.
         if self.flags.sample:
             image_saver = ImageSaver(os.path.join(self.flags.sample, self.log_date))
             print('Will store samples in {}.'.format(image_saver.out_dir))
@@ -279,6 +282,7 @@ class MultiscaleTester(object):
 
         log = ''
         one_line_output = not self.flags.sample
+        number_of_crops = collections.defaultdict(int)
 
         for i, img in enumerate(ds):
             filename = os.path.splitext(os.path.basename(ds.files[img['idx']]))[0]
@@ -286,37 +290,64 @@ class MultiscaleTester(object):
             if _CLEAN_CACHE_PERIODICALLY:
                 _clean_cuda_cache(i)
 
-            # We have to pad images not divisible by (2 ** num_scales), because we downsample num_scales-times.
-            # To get the correct bpsp, we have to use, num_subpixels_before_pad,
-            #   see `get_loss` in multiscale_blueprint.py
-            num_subpixels_before_pad = np.prod(img["raw"].shape)
-            img_batch, img_batch_raw = self.blueprint.unpack_batch_pad(img, fac=self._padding_fac())
-
+            # Use arithmetic coding to write to real files, and save time statistics.
             if self.flags.write_to_files:
                 print('***', filename)
+                img_raw = img["raw"].long().unsqueeze(0).to(pe.DEVICE)  # 1CHW
                 with self.times.skip(i == 0):
                     out_dir = self.flags.write_to_files
                     os.makedirs(out_dir, exist_ok=True)
                     out_p = os.path.join(out_dir, filename + _FILE_EXT)
-                    info = self._write_to_file(img_batch_raw, out_p)
-                    print(info)  # prints bpsp
-                    print('*' * 80)
+                    # As a side effect, create a time report if --time_report given.
+                    bpsp = self._write_to_file(img_raw, out_p)
+                    test_result[filename] = bpsp
+                    log = (f'{self.log_date}: {filename} ({i: 10d}): '
+                           f'mean {test_result.metric_name}={test_result.mean()}')
+                    print(log)
                     continue
 
-            out = self.blueprint.forward(img_batch, self.recursive)
-            loss_out = self.blueprint.get_loss(out, num_subpixels_before_pad=num_subpixels_before_pad)
+            raw_img_uint8 = img["raw"].unsqueeze(0)  # Full resolution image, !CHW
 
-            if self.recursive:
-                test_result[filename] = sum(loss_out.recursive_bpsps)
-            else:
-                test_result[filename] = sum(loss_out.nonrecursive_bpsps)
+            # Make sure we count bpsp of different crops of an image correctly.
+            combinator = auto_crop.CropLossCombinator()
 
-            if self.flags.sample:
-                self._sample(loss_out.nonrecursive_bpsps, img_batch, image_saver, '{}_{}'.format(i, filename))
+            num_crops_img = 0
+
+            for raw_img_uint8_crop in auto_crop.iter_crops(raw_img_uint8):
+                # We have to pad images not divisible by (2 ** num_scales), because we downsample num_scales-times.
+                # To get the correct bpsp, we have to use, num_subpixels_before_pad,
+                #   see `get_loss` in multiscale_blueprint.py
+                num_subpixels_before_pad = np.prod(raw_img_uint8_crop.shape)
+                img_batch, _ = self.blueprint.unpack_batch_pad(raw_img_uint8_crop, fac=self._padding_fac())
+
+                out = self.blueprint.forward(img_batch, self.recursive)
+                loss_out: MultiscaleLoss = self.blueprint.get_loss(
+                    out, num_subpixels_before_pad=num_subpixels_before_pad)
+
+                if self.flags.sample:  # TODO not tested with multiple crops
+                    self._sample(loss_out.nonrecursive_bpsps, img_batch, image_saver, '{}_{}'.format(i, filename))
+
+                if self.recursive:
+                    bpsp = sum(loss_out.recursive_bpsps)
+                else:
+                    bpsp = sum(loss_out.nonrecursive_bpsps)
+
+                combinator.add(bpsp.item(), num_subpixels_before_pad)
+                num_crops_img += 1
+
+            number_of_crops[num_crops_img] += 1
+            test_result[filename] = combinator.get_bpsp()
 
             log = f'{self.log_date}: {filename} ({i: 10d}): mean {test_result.metric_name}={test_result.mean()}'
+            number_of_crops_str = '|'.join(
+                f'{count}:{freq}' for count, freq in sorted(number_of_crops.items(), reverse=True))
+            log += ' crops:freq -> ' + number_of_crops_str
             _print(log, one_line_output)
+
         _print(log, one_line_output, final=True)
+
+        if self.flags.write_to_files:
+            return None
         return test_result
 
     def _write_to_file(self, img, out_p):
@@ -329,7 +360,12 @@ class MultiscaleTester(object):
             os.remove(out_p)
 
         with self.times.run('=== bc.encode'):
-            info = self.bc.encode(img, pout=out_p)
+            bpsp = self.bc.encode(img, pout=out_p)
+
+        # If encoder wrote as parts, update `out_p` so that decode finds files.
+        out_p_part = out_p + part_suffix_helper.make_part_suffix(0)
+        if not os.path.isfile(out_p) and os.path.isfile(out_p_part):
+            out_p = out_p_part
 
         with self.times.run('=== bc.decode'):
             img_o = self.bc.decode(pin=out_p)
@@ -342,7 +378,7 @@ class MultiscaleTester(object):
                 f.write('Average times:\n')
                 f.write('\n'.join(self.times.get_mean_strs()))
 
-        return info
+        return bpsp
 
     def encode(self, img_p, pout, overwrite=False):
         pout_dir = os.path.dirname(os.path.abspath(pout))
@@ -371,7 +407,8 @@ class MultiscaleTester(object):
         self._write_img(decoded, png_out_p)
         print(f'---\nDecoded: {png_out_p}')
 
-    def _read_img(self, img_p):
+    @staticmethod
+    def _read_img(img_p):
         img = np.array(Image.open(img_p)).transpose(2, 0, 1)  # Turn into CHW
         C, H, W = img.shape
         # check number of channels
@@ -382,11 +419,6 @@ class MultiscaleTester(object):
             raise EncodeError(f'Image has {C} channels, expected 3 or 4.')
         # Convert to 1CHW torch tensor
         img = torch.from_numpy(img).unsqueeze(0).long()
-        # Check padding
-        padding = self._padding_fac()
-        if H % padding != 0 or W % padding != 0:
-            print(f'*** WARN: image shape ({H}X{W}) not divisible by {padding}. Will pad...')
-            img = MultiscaleBlueprint.pad(img, fac=padding)
         return img
 
     @staticmethod
@@ -395,7 +427,6 @@ class MultiscaleTester(object):
         :param decoded: 1CHW tensor
         :param png_out_p: str
         """
-        # TODO: should undo padding
         assert decoded.shape[0] == 1 and decoded.shape[1] == 3, decoded.shape
         img = pe.tensor_to_np(decoded.squeeze(0))  # CHW
         img = img.transpose(1, 2, 0).astype(np.uint8)  # Make HW3

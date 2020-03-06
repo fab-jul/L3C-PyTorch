@@ -22,10 +22,14 @@ import numpy as np
 import torch
 from fjcommon import functools_ext as ft
 
+import auto_crop
 import bitcoding.coders_helpers
 import pytorch_ext as pe
 from bitcoding.coders import ArithmeticCoder
+from bitcoding import part_suffix_helper
+from blueprints.multiscale_blueprint import MultiscaleBlueprint
 from test import cuda_timer
+from helpers import pad
 
 
 # A random sequence of bytes used to separate the bitstreams of different scales
@@ -48,12 +52,33 @@ class Bitcoding(object):
         Encode image to disk at path `p`.
         :param img: uint8 tensor of shape CHW or 1CHW
         :param pout: path
+        :return actual_bpsp
         """
         assert not os.path.isfile(pout)
         if len(img.shape) == 3:
             img = img.unsqueeze(0)  # 1CHW
         assert len(img.shape) == 4 and img.shape[0] == 1 and img.shape[1] == 3, img.shape
         assert img.dtype == torch.int64, img.dtype
+
+        if auto_crop.needs_crop(img):
+            print('Need to encode individual crops!')
+
+            c = auto_crop.CropLossCombinator()
+            for i, img_crop in enumerate(auto_crop.iter_crops(img)):
+                bpsp_crop = self.encode(
+                    img_crop, pout + part_suffix_helper.make_part_suffix(i))
+                c.add(bpsp_crop, np.prod(img_crop.shape[-2:]))
+            return c.get_bpsp()
+
+        # TODO: Note that recursive is not supported.
+        padding = 2 ** self.blueprint.net.config_ms.num_scales
+        _, _, H, W = img.shape
+        if H % padding != 0 or W % padding != 0:
+            print(f'*** INFO: image shape ({H}X{W}) not divisible by {padding}, will pad.')
+            img, padding_tuple = pad.pad(
+                img, fac=padding, mode=MultiscaleBlueprint.get_padding_mode())
+        else:
+            padding_tuple = (0, 0, 0, 0)
 
         img = img.float()
 
@@ -69,6 +94,7 @@ class Bitcoding(object):
         entropy_coding_bytes = []  # bytes used by different scales
 
         with open(pout, 'wb') as fout:
+            write_padding_tuple(padding_tuple, fout)
             for scale, dmll, uniform in self.iter_scale_dmll():
                 with self.times.prefix_scope(f'[{scale}]'):
                     if uniform:
@@ -87,19 +113,30 @@ class Bitcoding(object):
             assumed_bpsps = [b * 8 / num_subpixels for b in entropy_coding_bytes]
             tostr = lambda l: ' | '.join(map('{:.3f}'.format, l)) + f' => {sum(l):.3f}'
             overhead = (sum(assumed_bpsps) / sum(loss_out.nonrecursive_bpsps) - 1) * 100
-            return f'Bitrates:\n' \
+            info = f'Bitrates:\n' \
                 f'theory:  {tostr(loss_out.nonrecursive_bpsps)}\n' \
                 f'assumed: {tostr(list(reversed(assumed_bpsps)))} [{overhead:.2f}%]\n' \
                 f'actual:                                => {actual_bpsp:.3f} [{actual_num_bytes} bytes]'
+            print(info)
+            return actual_bpsp
         else:
             return actual_bpsp
 
-    def decode(self, pin):
+    def decode(self, pin, _recurse_part=True):
         """
         :param pin:  Path where image is stored
+        :param _recurse_part: If True and `pin` ends in .partX, iterate over all parts an stitch!
         :return: Decoded image, as 1CHW, long
         """
+        if _recurse_part and part_suffix_helper.contains_part_suffix(pin):
+            parts = [self.decode(pin_part, _recurse_part=False)
+                     for pin_part in part_suffix_helper.iter_part_suffixes(pin)]
+            print(f'Stitching {len(parts)} parts...')
+            return auto_crop.stitch(parts)
+
         with open(pin, 'rb') as fin:
+            padding_tuple = read_padding_tuple(fin)
+
             dec_out_prev = None
             bn_prev = None  # bn of bottleneck - 1
 
@@ -118,7 +155,10 @@ class Bitcoding(object):
 
             assert bn_prev is not None  # assert decoding worked
 
-        return bn_prev.round().long()
+        out = bn_prev.round().long()
+        if any(p for p in padding_tuple):
+            out = pad.undo_pad(out, *padding_tuple)
+        return out
 
     def iter_scale_dmll(self):
         """ from smallest to largest
@@ -310,6 +350,17 @@ def write_num_bytes_encoded(num_bytes, fout):
 
 def read_num_bytes_encoded(fin):
     return int(read_bytes(fin, [np.uint32])[0])
+
+
+def write_padding_tuple(padding_tuple, fout):
+    assert len(padding_tuple) == 4
+    write_bytes(fout,
+                [np.uint16, np.uint16, np.uint16, np.uint16],
+                padding_tuple)
+
+
+def read_padding_tuple(fin):
+    return tuple(map(int, read_bytes(fin, [np.uint16, np.uint16, np.uint16, np.uint16])))
 
 
 def write_bytes(f, ts, xs):

@@ -187,7 +187,9 @@ class MultiscaleTrainer(Trainer):
                 out = self.blueprint.forward(img_batch)
 
             with self.summarizer.maybe_enable(prefix='train', flag=log_heavy, global_step=i):
-                loss_pc, nonrecursive_bpsps, _ = self.blueprint.get_loss(out)
+                loss_out = self.blueprint.get_loss(out)
+                loss_pc = loss_out.loss_pc
+                nonrecursive_bpsps = loss_out.nonrecursive_bpsps
 
             total_loss = loss_pc
             total_loss.backward()
@@ -232,9 +234,9 @@ class MultiscaleTrainer(Trainer):
             # Only log TB summaries for first batch
             with self.summarizer.maybe_enable(prefix='val', flag=j == 0, global_step=i):
                 out = self.blueprint.forward(img_batch)
-                loss_pc, nonrecursive_bpsps, _ = self.blueprint.get_loss(out)
+                loss_out = self.blueprint.get_loss(out)
 
-            bs.append('val/bpsp', sum(nonrecursive_bpsps))
+            bs.append('val/bpsp', sum(loss_out.nonrecursive_bpsps))
 
             if j > 0:
                 continue

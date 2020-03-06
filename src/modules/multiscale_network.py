@@ -331,8 +331,7 @@ class MultiscaleNetwork(vis.summarizable_module.SummarizableModule):
         :return: Out
         """
         if auto_recurse != 0:
-            # TODO
-            raise NotImplementedError(f'Currently not supported: autorecurse={auto_recurse}')
+            raise NotImplementedError(f'Currently not supported for sampling: autorecurse={auto_recurse}')
 
         print('-' * 40)
         print('- Sampling {}'.format(sample_scales))

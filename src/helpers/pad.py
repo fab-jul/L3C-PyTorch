@@ -44,11 +44,16 @@ def pad(img, fac, mode='replicate'):
     assert (padTop + padBottom + h) % fac == 0
     assert (padLeft + padRight + w) % fac == 0
 
-    def _undo_pad(img_):
-        # the or None makes sure that we don't get 0:0
-        img_out = img_[..., padTop:(-padBottom or None), padLeft:(-padRight or None)]
+    padding_tuple = (padLeft, padRight, padTop, padBottom)
+
+    return F.pad(img, padding_tuple, mode), padding_tuple
+
+
+def undo_pad(img, padLeft, padRight, padTop, padBottom, target_shape=None):
+    # the 'or None' makes sure that we don't get 0:0
+    img_out = img[..., padTop:(-padBottom or None), padLeft:(-padRight or None)]
+    if target_shape:
+        h, w = target_shape
         assert img_out.shape[-2:] == (h, w), (img_out.shape[-2:], (h, w), img_.shape,
                                               (padLeft, padRight, padTop, padBottom))
-        return img_out
-
-    return F.pad(img, (padLeft, padRight, padTop, padBottom), mode), _undo_pad
+    return img_out
