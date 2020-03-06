@@ -20,6 +20,7 @@ import argparse
 import multiprocessing
 import os
 import random
+import shutil
 import time
 import warnings
 from os.path import join
@@ -29,10 +30,9 @@ import numpy as np
 import skimage.color
 from PIL import Image
 
-# TODO: maybe release.
-# from dataloaders.cached_listdir_imgs import iter_images
 from helpers.paths import IMG_EXTENSIONS
 
+# TO SPEED THINGS UP: run on CPU cluster! We use task_array for this.
 # task_array is not released. It's used by us to batch process on our servers. Feel free to replace with whatever you
 # use. Make sure to set NUM_TASKS (number of concurrent processes) and set job_enumerate to a function that takes an
 # iterable and only yield elements to be processed by the current process.
@@ -49,12 +49,12 @@ random.seed(123)
 
 
 _NUM_PROCESSES = int(os.environ.get('NUM_PROCESS', 16))
+_DEFAULT_MAX_SCALE = 0.8
 
 
 get_fn = lambda p_: os.path.splitext(os.path.basename(p_))[0]
 
 
-# TODO: copied from dataloaders
 def iter_images(root_dir, num_folder_levels=0):
     fns = sorted(os.listdir(root_dir))
     for fn in fns:
@@ -70,43 +70,29 @@ def iter_images(root_dir, num_folder_levels=0):
 
 
 class Helper(object):
-    def __init__(self, out_dir_clean, out_dir_discard, resolution: int,
-                 crop4, crop16, random_scale):
+    def __init__(self, out_dir_clean, out_dir_discard, min_res: int):
         print(f'Creating {out_dir_clean}, {out_dir_discard}...')
         os.makedirs(out_dir_clean, exist_ok=True)
         os.makedirs(out_dir_discard, exist_ok=True)
         self.out_dir_clean = out_dir_clean
         self.out_dir_discard = out_dir_discard
 
-        print('Getting processed images...')
+        print('Getting images already processed...', end=" ", flush=True)
         self.images_cleaned = set(map(get_fn, os.listdir(out_dir_clean)))
         self.images_discarded = set(map(get_fn, os.listdir(out_dir_discard)))
-        print(f'Found {len(self.images_cleaned) + len(self.images_discarded)} processed images.')
+        print(f'-> Found {len(self.images_cleaned) + len(self.images_discarded)} images.')
 
-        self.resolution = resolution
+        self.min_res = min_res
 
-        self.crop4 = crop4
-        self.crop16 = crop16
-        self.random_scale = random_scale
-
-    def process_all_in(self, input_dir, filter_imgs_list=None):
+    def process_all_in(self, input_dir):
         images_dl = iter_images(input_dir)  # generator of paths
 
-        # files this job should comperss
+        # files this job should compress
         files_of_job = [p for _, p in job_enumerate(images_dl)]
         # files that were compressed already by somebody (i.e. this job earlier)
         processed_already = self.images_cleaned | self.images_discarded
         # resulting files to be compressed
         files_of_job = [p for p in files_of_job if get_fn(p) not in processed_already]
-
-        # TODO: Temporary to work around no discarding
-        if filter_imgs_list:
-            with open(filter_imgs_list, 'r') as f:
-                ps_orig = f.read().split('\n')
-            fns_to_use = set(map(get_fn, ps_orig))
-            print('Filtering with', len(fns_to_use), 'filenames. Before:', len(files_of_job))
-            files_of_job = [p for p in files_of_job if get_fn(p) in fns_to_use]
-            print('Filtered, now', len(files_of_job))
 
         N = len(files_of_job)
         if N == 0:
@@ -128,8 +114,6 @@ class Helper(object):
                     print(f'\r{time_per_img:.2e} s/img | '
                           f'{i / N * 100:.1f}% | '
                           f'{time_remaining / 60:.1f} min remaining', end='', flush=True)
-        if predicted_time:
-            print(f'Actual time: {(time.time() - start) / 60:.1f} // predicted {predicted_time / 60:.1f}')
 
     def process(self, p_in):
         fn, ext = os.path.splitext(os.path.basename(p_in))
@@ -139,124 +123,56 @@ class Helper(object):
             return 0
         try:
             im = Image.open(p_in)
-            if self.crop4 or self.crop16:
-                _crop_fn = _crop4 if self.crop4 else _crop16
-                for i, im_crop in enumerate(_crop_fn(im)):
-                    p_out = join(self.out_dir_clean, f'{fn}_{i}.png')
-                    print(p_out)
-                    im_crop.save(p_out)
-                return 1
-            if self.random_scale:
-                im_out = random_resize(im, min_res=self.random_scale)
-                if im_out is None:
-                    return 0
-                im_out.save(join(self.out_dir_clean, fn + '.png'))
-                return 1
-            # TODO: old code:
-            raise NotImplementedError('Currently only random scale supported!')
-            # im2 = resize_or_discard(im, self.resolution)
-            # if im2 is not None:
-            #     im2.save(join(self.out_dir_clean, fn + '.png'))
-            #     return 1
-            # else:
-            #     p_out = join(self.out_dir_discard, os.path.basename(p_in))
-            #     shutil.copy(p_in, p_out)
-            #     return 0
         except OSError as e:
-            print(e)
+            print(f'\n*** Error while opening {p_in}: {e}')
+            return 0
+        im_out = random_resize_or_discard(im, self.min_res)
+        if im_out is not None:
+            p_out = join(self.out_dir_clean, fn + '.png')  # Make sure to use .png!
+            im_out.save(p_out)
+            return 1
+        else:
+            p_out = join(self.out_dir_discard, os.path.basename(p_in))
+            shutil.copy(p_in, p_out)
             return 0
 
 
-def _crop16(im):
-    for im_cropped in _crop4(im):
-        yield from _crop4(im_cropped)
+def random_resize_or_discard(im, min_res: int):
+    """Randomly resize image with `random_resize` and check if it should be discarded."""
+    im_resized = random_resize(im, min_res)
+    if im_resized is None:
+        return None
+    if should_discard(im_resized):
+        return None
+    return im_resized
 
 
-def _crop4(im):
-    w, h = im.size
-    #               (left, upper, right, lower)
-    imgs = [im.crop((0, 0, w//2, h//2)),  # top left
-            im.crop((0, h//2, w//2, h)),  # bottom left
-            im.crop((w//2, 0, w, h//2)),  # top right
-            im.crop((w//2, h//2, w, h)),  # bottom right
-            ]
-
-    assert sum(np.prod(i.size) for i in imgs) == np.prod(im.size)
-    return imgs
-
-
-# TODO: old code:
-# def resize_or_discard(im, res: int, verbose=False):
-#     im2 = resize(im, res)
-#     if im2 is None:
-#         return None
-#     if should_discard(im2):
-#         return None
-#     return im2
-#
-#
-# def rescale(im, scale):
-#     W, H = im.size
-#
-#     W2 = round(W * scale)
-#     H2 = round(H * scale)
-#
-#     try:
-#         # TODO
-#         return im.resize((W2, H2), resample=Image.LANCZOS)
-#     except OSError as e:
-#         print('*** im.resize error', e)
-#         return None
-#
-#
-# def resize(im, res):
-#     """ scale longer side to `res`. """
-#     W, H = im.size
-#     D = max(W, H)
-#     scaling_factor = float(res) / D
-#     # image is already the target resolution, so no downscaling possible...
-#     if scaling_factor > 0.95:
-#         return None
-#     W2 = round(W * scaling_factor)
-#     H2 = round(H * scaling_factor)
-#     try:
-#         # TODO
-#         return im.resize((W2, H2), resample=Image.BICUBIC)
-#     except OSError as e:
-#         print('*** im.resize error', e)
-#         return None
-
-
-MAX_SCALE = 0.8
-
-
-def random_resize(im, min_res):
-    """Scale longer side to `min_res`, but only if that scales by < MAX_SCALE."""
+def random_resize(im, min_res: int, max_scale=_DEFAULT_MAX_SCALE):
+    """Scale longer side to `min_res`, but only if that scales by <= max_scale."""
     W, H = im.size
     D = min(W, H)
     scale_min = min_res / D
     # Image is too small to downscale by a factor smaller MAX_SCALE.
-    if scale_min > MAX_SCALE:
+    if scale_min > max_scale:
         return None
 
     # Get a random scale for new size.
-    scale = random.uniform(scale_min, MAX_SCALE)
+    scale = random.uniform(scale_min, max_scale)
     new_size = round(W * scale), round(H * scale)
     try:
         # Using LANCZOS!
         return im.resize(new_size, resample=PIL.Image.LANCZOS)
     except OSError as e:  # Happens for corrupted images
         print('*** Caught im.resize error', e)
-    return None
+        return None
 
 
-# TODO
 def should_discard(im):
-    # modes found in train_0:
+    """Return true iff the image is high in saturation or value, or not RGB."""
+    # Modes found in train_0:
     # Counter({'RGB': 152326, 'L': 4149, 'CMYK': 66})
     if im.mode != 'RGB':
         return True
-
     im_rgb = np.array(im)
     im_hsv = skimage.color.rgb2hsv(im_rgb)
     mean_hsv = np.mean(im_hsv, axis=(0, 1))
@@ -270,36 +186,30 @@ def should_discard(im):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('base_dir', help='Directory of images.')
-    p.add_argument('dirs', nargs='*', help='If given, must be subdiroectries in BASE_DIR. Will be processed.')
+    p.add_argument('base_dir',
+                   help='Directory of images, or directory of DIRS.')
+    p.add_argument('dirs', nargs='*',
+                   help='If given, must be subdirectories in BASE_DIR. Will be processed. '
+                        'If not given, assume BASE_DIR is already a directory of images.')
     p.add_argument('--out_dir_clean', required=True)
     p.add_argument('--out_dir_discard', required=True)
-    # TODO
-    # p.add_argument('--resolution', '-r', type=int, default=768)
-    p.add_argument('--crop4', action='store_true', help='Crop images into 4 parts')
-    p.add_argument('--crop16', action='store_true', help='Crop images into 16 parts')
-    p.add_argument('--random_scale', type=int, help='If given, randomly rescale each image to be at least '
-                                                    'RANDOM_SCALE long on the longer side.')
-    p.add_argument('--filter_with_list', type=str, help='If given, only process images in the specified file.')
+    p.add_argument('--resolution', type=int, default=512,
+                   help='Randomly rescale each image to be at least '
+                        'RANDOM_SCALE long on the longer side.')
 
     flags = p.parse_args()
-    if flags.filter_with_list and not os.path.isfile(flags.filter_with_list):
-        raise ValueError('Must be file: {}'.format(flags.filter_with_list))
-
-    h = Helper(flags.out_dir_clean, flags.out_dir_discard, None,  # TODO: flags.resolution,
-               flags.crop4, flags.crop16, flags.random_scale)
 
     # If --dirs not given, just assume `base_dir` is already the directory of images.
     if not flags.dirs:
         flags.dirs = [os.path.basename(flags.base_dir)]
         flags.base_dir = os.path.dirname(flags.base_dir)
 
-    for d in flags.dirs:
-        h.process_all_in(join(flags.base_dir, d),
-                         flags.filter_with_list)
+    h = Helper(flags.out_dir_clean, flags.out_dir_discard, flags.resolution)
+    for i, d in enumerate(flags.dirs):
+        print(f'*** {d}: {i}/{len(flags.dirs)}')
+        h.process_all_in(join(flags.base_dir, d))
 
-    # For cluster logs.
-    print('\n\nDONE')
+    print('\n\nDONE')  # For cluster logs.
 
 
 if __name__ == '__main__':

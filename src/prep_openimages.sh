@@ -40,7 +40,7 @@ VAL=validation
 DOWNLOAD_DIR=$DATA_DIR/download
 mkdir -p $DOWNLOAD_DIR
 pushd $DOWNLOAD_DIR
-for DIR in $TRAIN_0 $TRAIN_1 $TRAIN_2; do
+for DIR in $TRAIN_0 $TRAIN_1 $TRAIN_2 $VAL; do
     TAR=${DIR}.tar.gz
     if [ ! -f "$TAR" ]; then
         echo "Downloading $TAR..."
@@ -50,7 +50,7 @@ for DIR in $TRAIN_0 $TRAIN_1 $TRAIN_2; do
     fi
 done
 
-for DIR in $TRAIN_0 $TRAIN_1 $TRAIN_2; do
+for DIR in $TRAIN_0 $TRAIN_1 $TRAIN_2 $VAL; do
     TAR=${DIR}.tar.gz
     if [ -d $DIR ]; then
         echo "Found $DIR, not unpacking $TAR..."
@@ -75,6 +75,7 @@ FINAL_TRAIN_DIR=$DATA_DIR/train_oi
 FINAL_VAL_DIR=$DATA_DIR/val_oi
 
 DISCARD=$OUT_DIR/discard
+DISCARD_VAL=$OUT_DIR/discard_val
 pushd $SCRIPT_DIR
 
 echo "Importing train..."
@@ -83,13 +84,12 @@ echo "Importing train..."
 python import_train_images.py $DOWNLOAD_DIR $TRAIN_0 $TRAIN_1 $TRAIN_2 \
        --out_dir_clean=$FINAL_TRAIN_DIR \
        --out_dir_discard=$DISCARD \
-       --random_scale=512 \
-       # TODO: Re-enable discarding
-       --filter_with_list=tmp_discard_list
+       --resolution=512
 
-# TODO
-#python make_validation_set.py $TMP_TEST_DIR $FINAL_TEST_DIR
-
+python import_train_images.py $DOWNLOAD_DIR $VAL \
+       --out_dir_clean=$FINAL_VAL_DIR \
+       --out_dir_discard=$DISCARD_VAL \
+       --resolution=512
 
 # Update Cache ----------
 CACHE_P=$DATA_DIR/cache.pkl
@@ -97,7 +97,7 @@ export PYTHONPATH=$(pwd)
 
 echo "Updating cache $CACHE_P..."
 python dataloaders/images_loader.py update $FINAL_TRAIN_DIR "$CACHE_P" --min_size 128
-#python dataloaders/images_loader.py update $FINAL_VAL_DIR "$CACHE_P" --min_size 128
+python dataloaders/images_loader.py update $FINAL_VAL_DIR "$CACHE_P" --min_size 128
 
 echo "----------------------------------------"
 echo "Done"
