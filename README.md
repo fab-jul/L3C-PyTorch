@@ -25,7 +25,7 @@ Furthermore, we find that learning the auxiliary representation is crucial and o
 
 ## Version 3
 
-This is an updated version of the repo. See issue #14 for details.
+This is an updated version of the repo. See issue [#14](https://github.com/fab-jul/L3C-PyTorch/issues/14) for details.
 
 
 ## Prerequisites for Code
