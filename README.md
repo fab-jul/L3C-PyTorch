@@ -105,7 +105,7 @@ More flags available with `python test.py -h`.
 #### Open Images 500
 
 We evaluated our model on 500 images randomly selected from the Open Images validation set, and preprocessed like the 
-training data. [Download Open Images 500](TODO(release))
+training data. [Download Open Images 500](http://data.vision.ee.ethz.ch/mentzerf/validation_sets_lossless/val_oi_500_r.tar.gz)
 
 #### Adaptive Cropping
 
