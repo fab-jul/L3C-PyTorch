@@ -130,9 +130,9 @@ public:
 /** Get an instance of the `cdf_ptr` struct. */
 const struct cdf_ptr get_cdf_ptr(const at::Tensor& cdf)
 {
-    AT_CHECK(!cdf.is_cuda(), "cdf must be on CPU!")
+    TORCH_CHECK(!cdf.is_cuda(), "cdf must be on CPU!")
     const auto s = cdf.sizes();
-    AT_CHECK(s.size() == 4 && s[0] == 1, "Invalid size for cdf! Expected 1HWLp")
+    TORCH_CHECK(s.size() == 4 && s[0] == 1, "Invalid size for cdf! Expected 1HWLp")
 
     const int N_sym = s[1] * s[2];
     const int Lp = s[3];
@@ -239,10 +239,10 @@ py::bytes encode_logistic_mixture(
 {
     const int Lp = targets.sizes()[0];
     const auto s = means.sizes();
-    AT_CHECK(s.size() == 4 && s[0] == 1, "Invalid size for means! Expected 1KHW")
-    AT_CHECK(means.sizes() == log_scales.sizes(), "Invalid size for log_scales! Expected 1KHW")
-    AT_CHECK(means.sizes() == logit_probs_softmax.sizes(), "Invalid size for logit_probs_softmax! Expected 1KHW")
-    AT_CHECK(means.is_cuda() && log_scales.is_cuda() && logit_probs_softmax.is_cuda(), "Tensors must be on CUDA!")
+    TORCH_CHECK(s.size() == 4 && s[0] == 1, "Invalid size for means! Expected 1KHW")
+    TORCH_CHECK(means.sizes() == log_scales.sizes(), "Invalid size for log_scales! Expected 1KHW")
+    TORCH_CHECK(means.sizes() == logit_probs_softmax.sizes(), "Invalid size for logit_probs_softmax! Expected 1KHW")
+    TORCH_CHECK(means.is_cuda() && log_scales.is_cuda() && logit_probs_softmax.is_cuda(), "Tensors must be on CUDA!")
     const int N_sym = s[2] * s[3];
     const int K = s[1];
 
@@ -391,10 +391,10 @@ at::Tensor decode_logistic_mixture(
 {
     const int Lp = targets.sizes()[0];
     const auto s = means.sizes();
-    AT_CHECK(s.size() == 4 && s[0] == 1, "Invalid size for means! Expected 1KHW")
-    AT_CHECK(means.sizes() == log_scales.sizes(), "Invalid size for log_scales! Expected 1KHW")
-    AT_CHECK(means.sizes() == logit_probs_softmax.sizes(), "Invalid size for logit_probs_softmax! Expected 1KHW")
-    AT_CHECK(means.is_cuda() && log_scales.is_cuda() && logit_probs_softmax.is_cuda(), "Tensors must be on CUDA!")
+    TORCH_CHECK(s.size() == 4 && s[0] == 1, "Invalid size for means! Expected 1KHW")
+    TORCH_CHECK(means.sizes() == log_scales.sizes(), "Invalid size for log_scales! Expected 1KHW")
+    TORCH_CHECK(means.sizes() == logit_probs_softmax.sizes(), "Invalid size for logit_probs_softmax! Expected 1KHW")
+    TORCH_CHECK(means.is_cuda() && log_scales.is_cuda() && logit_probs_softmax.is_cuda(), "Tensors must be on CUDA!")
     const int N_sym = s[2] * s[3];
     const int K = s[1];
 
