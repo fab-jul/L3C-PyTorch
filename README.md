@@ -207,13 +207,26 @@ When an experiment is started, a directory with all this information is created 
 For example, running
 
 ```bash
-python train.py configs/ms/cr.cf configs/dl/oi.cf log_dir -p upsampling=deconv
+python train.py configs/ms/cr.cf configs/dl/oi.cf log_dir
 ```
 
 results in a folder `log_dir`, and in there another folder called
 
 ```
-0502_1213 cr oi upsampling=deconv
+0502_1213 cr oi 
+```
+
+If you want to modify the code, consider using the `-p` flag. For example,
+if you wanted to add a flag for upsampling, you could do
+
+```bash
+python train.py configs/ms/cr.cf configs/dl/oi.cf log_dir -p upsampling=newfancymethod
+```
+
+which would result in a folder called
+
+```
+0502_1213 cr oi upsampling=newfancymethod
 ```
 
 Checkpoints (weights) will be stored in a subfolder called `ckpts`.
