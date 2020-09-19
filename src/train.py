@@ -57,7 +57,7 @@ def main(args, configs_dir=DEFAULT_CONFIG_DIR):
     p.add_argument('--log_train', '-ltrain', type=int, default=100,
                    help='Interval of train output.')
     p.add_argument('--log_train_heavy', '-ltrainh', type=int, default=5, metavar='LOG_HEAVY_FAC',
-                   help='Every LOG_HEAVY_FAC-th time that i % LOG_TRAIN is 0, also output heavy logs.')
+                   help='Every LOG_HEAVY_FAC-th time that i %% LOG_TRAIN is 0, also output heavy logs.')
     p.add_argument('--log_val', '-lval', type=int, default=500,
                    help='Interval of validation output.')
 
