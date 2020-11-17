@@ -279,6 +279,10 @@ For bitcoding, there is the `Bitcoding` class, which uses the `ArithmeticCoding`
 
 ## The `torchac` Module: Fast Entropy Coding in PyTorch
 
+&#x2757; **Update**: _We released `torchac` as a stand-alone repo, that does not depend on CUDA. 
+Check it out [here](https://github.com/fab-jul/torchac). 
+To run L3C, you need the version here, but for your own future work, the stand-alone repo will be better._ &#x2757;
+
 We implemented an entropy coding module as a C++ extension for PyTorch, because no existing fast Python entropy
  coding module was available. You'll need to build it if you plan to use the `--write_to_file` flag for `test.py`
  ([see Evaluation of Models](#evaluation-of-models)).
@@ -287,10 +291,6 @@ The implementation is based on [this blog post](https://marknelson.us/posts/2014
 meaning that we implement _arithmetic coding_.
 It is **not optimized**, however, it's much faster than doing the equivalent thing in pure-Python (because of all the
  bit-shift etc.). Encoding an entire `512 x 512` image happens in 0.202s (see Appendix A in the paper).
-
-A good starting point for optimizing the code would probably be the [`range_coder.cc`](https://github.com/tensorflow/compression/blob/master/tensorflow_compression/cc/kernels/range_coder.cc)
-implementation of
-[TFC](https://tensorflow.github.io/compression/).
 
 
 #### GPU and CPU support
@@ -303,7 +303,10 @@ However, compiling with CUDA is probably a hassle. We tested with
 - GCC 5.5 and NVCC 9.0
 - GCC 7.4 and NVCC 10.1 (update 2)
 - _Did not work_: GCC 6.0 and NVCC 9
+
 Please comment if you have insights into which other configurations work (or don't.)
+
+&#x2757; _See update above on the stand-alond [torchac repo](https://github.com/fab-jul/torchac) that does not need GCC or NVCC._ &#x2757;
 
 The main part (arithmetic coding), is always on CPU.
 
