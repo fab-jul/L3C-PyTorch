@@ -65,7 +65,7 @@ We release the following trained models:
 | Main Model | L3C | [ImageNet32](http://image-net.org/download-images)    | `0524_0004` | [L3C_inet32.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models/L3C_inet32.tar.gz) |
 | Main Model | L3C | [ImageNet64](http://image-net.org/download-images)    | `0524_0005` | [L3C_inet64.tar.gz](http://data.vision.ee.ethz.ch/mentzerf/l3c_models/L3C_inet64.tar.gz) |
 
-See [Evaluation of Models](#evaluation-of-models) to learn how to evaluate on a dataset.
+See [Evaluation of Models](#evaluation) to learn how to evaluate on a dataset.
 
 ### Training
 
@@ -285,7 +285,7 @@ To run L3C, you need the version here, but for your own future work, the stand-a
 
 We implemented an entropy coding module as a C++ extension for PyTorch, because no existing fast Python entropy
  coding module was available. You'll need to build it if you plan to use the `--write_to_file` flag for `test.py`
- ([see Evaluation of Models](#evaluation-of-models)).
+ ([see Evaluation of Models](#evaluation)).
 
 The implementation is based on [this blog post](https://marknelson.us/posts/2014/10/19/data-compression-with-arithmetic-coding.html),
 meaning that we implement _arithmetic coding_.
