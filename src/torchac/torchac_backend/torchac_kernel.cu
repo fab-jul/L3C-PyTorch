@@ -96,10 +96,10 @@ std::string to_string(const T& object) {
     return ss.str();
 }
 
-#define CHECK_1KHW(K, x) AT_CHECK(x.sizes().size() == 4 && x.sizes()[0] == 1 && x.sizes()[1] == K,  \
+#define CHECK_1KHW(K, x) TORCH_CHECK(x.sizes().size() == 4 && x.sizes()[0] == 1 && x.sizes()[1] == K,  \
         "#x must be 4D, got %s", to_string(x.sizes()))
 
-#define CHECK_CONTIGUOUS_AND_CUDA(x) AT_CHECK(x.is_contiguous() && x.is_cuda(), \
+#define CHECK_CONTIGUOUS_AND_CUDA(x) TORCH_CHECK(x.is_contiguous() && x.is_cuda(), \
         "#x must be contiguous and on GPU, got %d and %d", x.is_contiguous(), x.is_cuda())
 
 void calculate_cdf(
@@ -119,12 +119,12 @@ void calculate_cdf(
     CHECK_CONTIGUOUS_AND_CUDA(log_scales);
     CHECK_CONTIGUOUS_AND_CUDA(logit_probs_softmax);
 
-    AT_CHECK(means.sizes() == log_scales.sizes() &&
+    TORCH_CHECK(means.sizes() == log_scales.sizes() &&
              log_scales.sizes() == logit_probs_softmax.sizes())
 
     const auto param_sizes = means.sizes();
     const auto N = param_sizes[2] * param_sizes[3];  // H * W
-    AT_CHECK(N == N_cdf, "%d != %d", N, N_cdf);
+    TORCH_CHECK(N == N_cdf, "%d != %d", N, N_cdf);
 
     const int blockSize = 1024;
     const int numBlocks = (N * Lp + blockSize - 1) / blockSize;
