@@ -1,10 +1,5 @@
 # Practical Full Resolution Learned Lossless Image Compression
 
----
-
-## ❗  **_Missing validation set_**: The validation set `val_oi_500_r` was removed from ETH. I'm currently trying to re-obtain it. Please reach out to me if you have it! ❗ 
-
----
 
 ### Fabian Mentzer, Eirikur Agustsson, Michael Tschannen, Radu Timofte, Luc Van Gool
 ETH Zurich
@@ -115,10 +110,8 @@ More flags available with `python test.py -h`.
 #### Evaluation on Open Images
 
 We evaluated our model on 500 images randomly selected from the Open Images validation set, and preprocessed like the 
-training data. To compare, please ~~
-[download Open Images evaluation set here](http://data.vision.ee.ethz.ch/mentzerf/validation_sets_lossless/val_oi_500_r.tar.gz).~~
-
-❗  **_UPDATE_**: The validation set was removed from ETH. I'm currently trying to re-obtain it. Please reach out to me if you have it! ❗ 
+training data. To compare, please 
+[download Open Images evaluation set here](http://data.vision.ee.ethz.ch/mentzerf/validation_sets_lossless/val_oi_500_r.tar.gz).
 
 #### Adaptive Cropping
 
